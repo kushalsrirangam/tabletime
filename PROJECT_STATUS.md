@@ -6,13 +6,13 @@ This is the permanent project checkpoint. Read it before development work and up
 
 ## Current overall progress
 
-Approximately **70% complete**.
+Approximately **72% complete**.
 
 - Design and interactive MVP: **92%**
 - Database foundation: **98%**
 - Live backend connection: **75%**
 - Advanced restaurant features: **15%**
-- Store publication: **0%**
+- Store publication: **10%**
 
 ## Completed and verified
 
@@ -71,6 +71,9 @@ Approximately **70% complete**.
 - Expo Doctor: 18/18 checks passed
 - TypeScript validation passed
 - Production web export passed
+- Git repository published to `https://github.com/kushalsrirangam/tabletime.git` on branch `main`
+- Initial GitHub commit `9d2b0d0` pushed successfully with Git Credential Manager
+- Vercel production project creation accepted as `tabletime`; deployment `dpl_BAqzfwYW5dLBu6gNxTAoZcQZ5e2E` was assigned a production deployment URL
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -85,8 +88,7 @@ Approximately **70% complete**.
 
 ## Failures and blockers
 
-- GitHub CLI 2.97.0 is installed at `C:\Program Files\GitHub CLI\gh.exe`, but GitHub authentication is still pending because the existing PowerShell window did not refresh its PATH. The local repository still has no remote or first commit. Run the executable by full path or reopen PowerShell, complete `gh auth login`, and then resume deployment. No source files or credentials have been published yet.
-- Vercel CLI is not installed globally. The connected Vercel integration is available, but the GitHub publication step should be completed first so the production project can be linked to the repository for future automatic deployments.
+- The Vercel API accepted production deployment `dpl_BAqzfwYW5dLBu6gNxTAoZcQZ5e2E`, but the assigned URL currently redirects to Vercel login/protection and the connector cannot retrieve the new project afterward. Sign in once in the in-app Vercel browser, then inspect the deployment, enable a public production URL if needed, and link the GitHub repository for automatic future deployments.
 - Docker Desktop's Linux engine returned an internal API error. Local Supabase still cannot start, although both migrations are now applied and verified in the dedicated cloud project.
 - The pre-existing cloud project named `kushalsrirangam's Project` remains untouched.
 - Supabase Security Advisor reports three intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap and clock RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
@@ -97,7 +99,7 @@ Approximately **70% complete**.
 
 ## Next work in order
 
-1. Install/authenticate GitHub CLI, publish the repository, and deploy the production web app to Vercel.
+1. Complete the one-time Vercel dashboard sign-in, verify the production deployment, make its production URL public, and link `kushalsrirangam/tabletime` for automatic future deployments.
 2. Connect clock actions and punch history to the verified server RPC functions.
 3. Connect requests and approvals to the live database.
 4. Add Realtime updates and offline/error handling.

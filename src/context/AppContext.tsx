@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { employees as initialEmployees, initialRequests, shifts as initialShifts } from '../data';
 import { supabase } from '../lib/supabase';
 import { ClockEntry, Employee, NewShiftInput, NewTimeOffInput, Shift, StaffRequest, UserRole } from '../types';
@@ -18,12 +18,15 @@ type AppContextValue = StoredState & {
   hydrated: boolean;
   dataLoading: boolean;
   dataError?: string;
+  liveClockEnabled: boolean;
+  clockActionLoading: boolean;
+  clockActionError?: string;
   employees: Employee[];
   role: UserRole;
   activeEntry?: ClockEntry;
   setRole: (role: UserRole) => void;
-  clockIn: () => void;
-  clockOut: () => void;
+  clockIn: () => Promise<void>;
+  clockOut: () => Promise<void>;
   toggleBreak: () => void;
   resolveRequest: (id: string, status: 'approved' | 'declined') => void;
   addTimeOffRequest: (input: NewTimeOffInput) => void;
@@ -48,18 +51,31 @@ function formatDateTime(value: string, timeZone: string) {
   };
 }
 
+function clockErrorMessage(message: string, action: 'in' | 'out') {
+  const normalized = message.toLowerCase();
+  if (normalized.includes('no active employee record')) return 'Your employee profile is not active at this location. Ask a manager to review your assignment.';
+  if (normalized.includes('no open time entry')) return 'No open shift was found. Your punches have been refreshed.';
+  if (normalized.includes('one_open_time_entry') || normalized.includes('duplicate key')) return 'You are already clocked in. Your punches have been refreshed.';
+  if (normalized.includes('authentication required') || normalized.includes('jwt')) return 'Your session expired. Sign in again before clocking in or out.';
+  return `Clock-${action} could not be completed. ${message}`;
+}
+
 export function AppProvider({ children }: PropsWithChildren) {
   const { backendConfigured, session, workspace } = useAuth();
   const [demoRole, setDemoRole] = useState<UserRole>('manager');
   const [hydrated, setHydrated] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState<string>();
+  const [clockActionLoading, setClockActionLoading] = useState(false);
+  const [clockActionError, setClockActionError] = useState<string>();
+  const clockActionInFlight = useRef(false);
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [clockEntries, setClockEntries] = useState<ClockEntry[]>([]);
   const [onBreak, setOnBreak] = useState(false);
   const [requests, setRequests] = useState<StaffRequest[]>(initialRequests);
   const [shifts, setShifts] = useState<Shift[]>(initialShifts);
   const role: UserRole = backendConfigured && workspace ? (workspace.role === 'employee' ? 'employee' : 'manager') : demoRole;
+  const currentEmployeeId = backendConfigured ? workspace?.employeeId : 'e1';
 
   useEffect(() => {
     if (backendConfigured) {
@@ -78,6 +94,13 @@ export function AppProvider({ children }: PropsWithChildren) {
       .catch(() => undefined)
       .finally(() => setHydrated(true));
   }, [backendConfigured]);
+
+  useEffect(() => {
+    if (!backendConfigured) return;
+    setClockEntries([]);
+    setOnBreak(false);
+    setClockActionError(undefined);
+  }, [backendConfigured, workspace?.employeeId]);
 
   useEffect(() => {
     if (!hydrated || backendConfigured) return;
@@ -101,13 +124,17 @@ export function AppProvider({ children }: PropsWithChildren) {
     const timeRangeStart = new Date();
     timeRangeStart.setDate(timeRangeStart.getDate() - 7);
 
-    const [employeeResult, shiftResult, timeResult] = await Promise.all([
+    const personalTimeQuery = workspace.employeeId
+      ? supabase.from('time_entries').select('id, employee_id, clocked_in_at, clocked_out_at').eq('organization_id', workspace.organizationId).eq('employee_id', workspace.employeeId).order('clocked_in_at', { ascending: false }).limit(20)
+      : Promise.resolve({ data: [], error: null });
+    const [employeeResult, shiftResult, timeResult, personalTimeResult] = await Promise.all([
       supabase.from('employees').select('id, full_name, email, job_title, employment_status').eq('organization_id', workspace.organizationId).neq('employment_status', 'inactive').order('full_name'),
       supabase.from('shifts').select('id, employee_id, starts_at, ends_at, position, status').eq('organization_id', workspace.organizationId).neq('status', 'cancelled').gte('starts_at', rangeStart.toISOString()).lt('starts_at', rangeEnd.toISOString()).order('starts_at'),
       supabase.from('time_entries').select('employee_id, clocked_in_at, clocked_out_at').eq('organization_id', workspace.organizationId).gte('clocked_in_at', timeRangeStart.toISOString()),
+      personalTimeQuery,
     ]);
 
-    const error = employeeResult.error ?? shiftResult.error ?? timeResult.error;
+    const error = employeeResult.error ?? shiftResult.error ?? timeResult.error ?? personalTimeResult.error;
     if (error) {
       setDataError(error.message);
       setDataLoading(false);
@@ -150,6 +177,14 @@ export function AppProvider({ children }: PropsWithChildren) {
         endsAt: shift.ends_at,
       };
     }));
+    setClockEntries((personalTimeResult.data ?? []).slice().reverse().map((entry) => ({
+      id: entry.id,
+      employeeId: entry.employee_id,
+      clockIn: entry.clocked_in_at,
+      clockOut: entry.clocked_out_at ?? undefined,
+      breakMinutes: 0,
+    })));
+    setOnBreak(false);
     setDataLoading(false);
   }, [backendConfigured, workspace]);
 
@@ -158,27 +193,77 @@ export function AppProvider({ children }: PropsWithChildren) {
   }, [refreshLiveData]);
 
   const activeEntry = useMemo(
-    () => clockEntries.find((entry) => entry.employeeId === 'e1' && !entry.clockOut),
-    [clockEntries],
+    () => currentEmployeeId ? clockEntries.find((entry) => entry.employeeId === currentEmployeeId && !entry.clockOut) : undefined,
+    [clockEntries, currentEmployeeId],
   );
 
-  const clockIn = useCallback(() => {
+  const clockIn = useCallback(async () => {
+    if (clockActionInFlight.current) return;
+    if (backendConfigured) {
+      if (!supabase || !session || !workspace?.employeeId || !workspace.locationId) {
+        setClockActionError('An active employee profile and primary location are required before clocking in.');
+        return;
+      }
+      clockActionInFlight.current = true;
+      setClockActionLoading(true);
+      setClockActionError(undefined);
+      try {
+        const { error } = await supabase.rpc('clock_in', { target_location_id: workspace.locationId });
+        if (error) {
+          setClockActionError(clockErrorMessage(error.message, 'in'));
+          if (error.message.toLowerCase().includes('duplicate key')) await refreshLiveData();
+          return;
+        }
+        await refreshLiveData();
+      } catch (error) {
+        setClockActionError(clockErrorMessage(error instanceof Error ? error.message : 'Check your connection and try again.', 'in'));
+      } finally {
+        clockActionInFlight.current = false;
+        setClockActionLoading(false);
+      }
+      return;
+    }
     setClockEntries((current) => {
       if (current.some((entry) => entry.employeeId === 'e1' && !entry.clockOut)) return current;
       return [...current, { id: `entry-${Date.now()}`, employeeId: 'e1', clockIn: new Date().toISOString(), breakMinutes: 0 }];
     });
-  }, []);
+  }, [backendConfigured, refreshLiveData, session, workspace]);
 
-  const clockOut = useCallback(() => {
+  const clockOut = useCallback(async () => {
+    if (clockActionInFlight.current) return;
+    if (backendConfigured) {
+      if (!supabase || !session || !workspace?.employeeId) {
+        setClockActionError('An active signed-in employee profile is required before clocking out.');
+        return;
+      }
+      clockActionInFlight.current = true;
+      setClockActionLoading(true);
+      setClockActionError(undefined);
+      try {
+        const { error } = await supabase.rpc('clock_out');
+        if (error) {
+          setClockActionError(clockErrorMessage(error.message, 'out'));
+          if (error.message.toLowerCase().includes('no open time entry')) await refreshLiveData();
+          return;
+        }
+        await refreshLiveData();
+      } catch (error) {
+        setClockActionError(clockErrorMessage(error instanceof Error ? error.message : 'Check your connection and try again.', 'out'));
+      } finally {
+        clockActionInFlight.current = false;
+        setClockActionLoading(false);
+      }
+      return;
+    }
     setClockEntries((current) => current.map((entry) => (
       entry.employeeId === 'e1' && !entry.clockOut ? { ...entry, clockOut: new Date().toISOString() } : entry
     )));
     setOnBreak(false);
-  }, []);
+  }, [backendConfigured, refreshLiveData, session, workspace]);
 
   const toggleBreak = useCallback(() => {
-    if (activeEntry) setOnBreak((current) => !current);
-  }, [activeEntry]);
+    if (!backendConfigured && activeEntry) setOnBreak((current) => !current);
+  }, [activeEntry, backendConfigured]);
 
   const resolveRequest = useCallback((id: string, status: 'approved' | 'declined') => {
     setRequests((current) => current.map((request) => request.id === id ? { ...request, status } : request));
@@ -237,9 +322,9 @@ export function AppProvider({ children }: PropsWithChildren) {
   }, [backendConfigured, refreshLiveData, workspace]);
 
   const value = useMemo(() => ({
-    hydrated, dataLoading, dataError, employees, role, setRole: setDemoRole, clockEntries, activeEntry, onBreak, requests, shifts,
+    hydrated, dataLoading, dataError, liveClockEnabled: backendConfigured, clockActionLoading, clockActionError, employees, role, setRole: setDemoRole, clockEntries, activeEntry, onBreak, requests, shifts,
     clockIn, clockOut, toggleBreak, resolveRequest, addTimeOffRequest, addShift, publishSchedule, refreshLiveData,
-  }), [activeEntry, addShift, addTimeOffRequest, clockEntries, clockIn, clockOut, dataError, dataLoading, employees, hydrated, onBreak, publishSchedule, refreshLiveData, requests, resolveRequest, role, shifts, toggleBreak]);
+  }), [activeEntry, addShift, addTimeOffRequest, backendConfigured, clockActionError, clockActionLoading, clockEntries, clockIn, clockOut, dataError, dataLoading, employees, hydrated, onBreak, publishSchedule, refreshLiveData, requests, resolveRequest, role, shifts, toggleBreak]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

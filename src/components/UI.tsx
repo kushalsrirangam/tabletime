@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { colors, radius } from '../theme';
 
 export function PageTitle({ eyebrow, title, subtitle, action }: { eyebrow?: string; title: string; subtitle: string; action?: React.ReactNode }) {
@@ -29,10 +29,11 @@ export function SectionHeader({ title, action, onPress }: { title: string; actio
   );
 }
 
-export function Button({ label, icon, onPress, variant = 'primary', compact = false }: { label: string; icon?: keyof typeof Ionicons.glyphMap; onPress?: () => void; variant?: 'primary' | 'secondary' | 'danger'; compact?: boolean }) {
+export function Button({ label, icon, onPress, variant = 'primary', compact = false, disabled = false, loading = false }: { label: string; icon?: keyof typeof Ionicons.glyphMap; onPress?: () => void; variant?: 'primary' | 'secondary' | 'danger'; compact?: boolean; disabled?: boolean; loading?: boolean }) {
+  const iconColor = variant === 'secondary' ? colors.ink : colors.surface;
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.button, styles[`${variant}Button`], compact && styles.compactButton, pressed && styles.buttonPressed]}>
-      {icon ? <Ionicons name={icon} size={compact ? 15 : 18} color={variant === 'secondary' ? colors.ink : colors.surface} /> : null}
+    <Pressable accessibilityRole="button" disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [styles.button, styles[`${variant}Button`], compact && styles.compactButton, (disabled || loading) && styles.buttonDisabled, pressed && styles.buttonPressed]}>
+      {loading ? <ActivityIndicator size="small" color={iconColor} /> : icon ? <Ionicons name={icon} size={compact ? 15 : 18} color={iconColor} /> : null}
       <Text style={[styles.buttonText, variant === 'secondary' && styles.secondaryButtonText]}>{label}</Text>
     </Pressable>
   );
@@ -67,7 +68,7 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.ink, fontSize: 16, fontWeight: '800' }, link: { color: colors.forest, fontSize: 13, fontWeight: '700' },
   button: { minHeight: 46, paddingHorizontal: 18, borderRadius: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
   primaryButton: { backgroundColor: colors.forest }, secondaryButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }, dangerButton: { backgroundColor: colors.red },
-  compactButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 9 }, buttonPressed: { opacity: 0.78 },
+  compactButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 9 }, buttonDisabled: { opacity: 0.56 }, buttonPressed: { opacity: 0.78 },
   buttonText: { color: colors.surface, fontSize: 13, fontWeight: '800' }, secondaryButtonText: { color: colors.ink },
   personAvatar: { alignItems: 'center', justifyContent: 'center' }, personInitials: { fontWeight: '800' },
   pill: { alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 5, borderRadius: radius.pill }, pillText: { fontSize: 10, fontWeight: '800' },

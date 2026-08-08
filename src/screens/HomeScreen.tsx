@@ -15,11 +15,13 @@ function formatElapsed(startedAt: string, now: number) {
 export function HomeScreen({ onNavigate }: { onNavigate: (tab: TabKey) => void }) {
   const { width } = useWindowDimensions();
   const compact = width < 720;
-  const { role, activeEntry, onBreak, clockIn, clockOut, requests, shifts, employees } = useApp();
+  const { role, activeEntry, onBreak, clockIn, clockOut, clockActionLoading, clockActionError, requests, shifts, employees } = useApp();
   const { workspace } = useAuth();
   const [now, setNow] = useState(Date.now());
   const firstName = workspace?.fullName.split(/\s+/)[0] ?? 'Jordan';
   const restaurantName = workspace?.organizationName ?? 'The Juniper Room';
+  const timeZone = workspace?.locationTimezone ?? workspace?.organizationTimezone;
+  const currentEmployeeId = workspace?.employeeId ?? 'e1';
   const todayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: workspace?.organizationTimezone }).format(new Date()).toUpperCase();
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (tab: TabKey) => void }
               ))}
             </Card>
             <View style={styles.columnNarrow}>
-              <ClockCard activeEntry={activeEntry?.clockIn} onBreak={onBreak} onClockIn={clockIn} onClockOut={clockOut} onOpen={() => onNavigate('clock')} />
+              <ClockCard activeEntry={activeEntry?.clockIn} onBreak={onBreak} onClockIn={clockIn} onClockOut={clockOut} onOpen={() => onNavigate('clock')} now={now} timeZone={timeZone} busy={clockActionLoading} error={clockActionError} />
               <Card>
                 <SectionHeader title="Coverage" />
                 <View style={styles.coverageRow}><Text style={styles.coverageTime}>5–7 PM</Text><View style={styles.coverageTrack}><View style={[styles.coverageFill, { width: '86%' }]} /></View><Text style={styles.coverageValue}>6/7</Text></View>
@@ -75,10 +77,10 @@ export function HomeScreen({ onNavigate }: { onNavigate: (tab: TabKey) => void }
         </>
       ) : (
         <View style={[styles.columns, compact && styles.stack]}>
-          <ClockCard activeEntry={activeEntry?.clockIn} onBreak={onBreak} onClockIn={clockIn} onClockOut={clockOut} onOpen={() => onNavigate('clock')} large />
+          <ClockCard activeEntry={activeEntry?.clockIn} onBreak={onBreak} onClockIn={clockIn} onClockOut={clockOut} onOpen={() => onNavigate('clock')} now={now} timeZone={timeZone} busy={clockActionLoading} error={clockActionError} large />
           <Card style={styles.columnWide}>
             <SectionHeader title="Your next shifts" action="Full schedule" onPress={() => onNavigate('schedule')} />
-            {shifts.filter((shift) => shift.employeeId === 'e1').map((shift) => (
+            {shifts.filter((shift) => shift.employeeId === currentEmployeeId).map((shift) => (
               <View key={shift.id} style={styles.shiftRow}>
                 <View style={styles.dateBox}><Text style={styles.dateMonth}>{shift.date.split(' ')[0]}</Text><Text style={styles.dateDay}>{shift.date.split(' ')[1]}</Text></View>
                 <View style={styles.personCopy}><Text style={styles.personName}>{shift.day}</Text><Text style={styles.personRole}>{shift.start} – {shift.end}</Text></View>
@@ -102,8 +104,11 @@ function Metric({ icon, label, value, detail, tone }: { icon: keyof typeof Ionic
   );
 }
 
-function ClockCard({ activeEntry, onBreak, onClockIn, onClockOut, onOpen, large }: { activeEntry?: string; onBreak: boolean; onClockIn: () => void; onClockOut: () => void; onOpen: () => void; large?: boolean }) {
-  const elapsed = activeEntry ? formatElapsed(activeEntry, Date.now()) : 'Not clocked in';
+function ClockCard({ activeEntry, onBreak, onClockIn, onClockOut, onOpen, now, timeZone, busy, error, large }: { activeEntry?: string; onBreak: boolean; onClockIn: () => Promise<void>; onClockOut: () => Promise<void>; onOpen: () => void; now: number; timeZone?: string; busy: boolean; error?: string; large?: boolean }) {
+  const elapsed = activeEntry ? formatElapsed(activeEntry, now) : 'Not clocked in';
+  const handleClockAction = () => {
+    void (activeEntry ? onClockOut() : onClockIn());
+  };
   return (
     <Card style={[styles.clockCard, large && styles.clockCardLarge]}>
       <View style={sharedStyles.row}>
@@ -111,8 +116,9 @@ function ClockCard({ activeEntry, onBreak, onClockIn, onClockOut, onOpen, large 
         <View style={styles.personCopy}><Text style={styles.clockLabel}>Your shift</Text><Text style={styles.clockState}>{onBreak ? 'Break in progress' : activeEntry ? 'Clocked in' : 'Ready when you are'}</Text></View>
       </View>
       <Text style={styles.elapsed}>{elapsed}</Text>
-      <Text style={styles.clockHint}>{activeEntry ? `Started ${new Date(activeEntry).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Scheduled today · 9:00 AM–5:00 PM'}</Text>
-      <Button label={activeEntry ? 'Clock out' : 'Clock in'} icon={activeEntry ? 'stop-circle-outline' : 'play-circle-outline'} onPress={activeEntry ? onClockOut : onClockIn} variant={activeEntry ? 'danger' : 'primary'} />
+      <Text style={styles.clockHint}>{activeEntry ? `Started ${new Date(activeEntry).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone })}` : 'Ready to start your shift'}</Text>
+      <Button label={busy ? (activeEntry ? 'Clocking out…' : 'Clocking in…') : activeEntry ? 'Clock out' : 'Clock in'} icon={activeEntry ? 'stop-circle-outline' : 'play-circle-outline'} onPress={handleClockAction} variant={activeEntry ? 'danger' : 'primary'} loading={busy} disabled={busy} />
+      {error ? <Text accessibilityRole="alert" style={styles.clockError}>{error}</Text> : null}
       <Text onPress={onOpen} style={styles.clockLink}>Open time clock</Text>
     </Card>
   );
@@ -127,7 +133,7 @@ const styles = StyleSheet.create({
   personName: { color: colors.ink, fontSize: 13, fontWeight: '800' }, personRole: { color: colors.muted, fontSize: 12, marginTop: 4 },
   clockCard: { gap: 14 }, clockCardLarge: { flex: 0.85, minHeight: 290, justifyContent: 'center' }, clockIcon: { width: 42, height: 42, backgroundColor: colors.mint, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   clockLabel: { color: colors.muted, fontSize: 11, fontWeight: '700' }, clockState: { color: colors.ink, fontSize: 14, fontWeight: '800', marginTop: 3 },
-  elapsed: { color: colors.ink, fontSize: 30, fontWeight: '800', letterSpacing: -1 }, clockHint: { color: colors.muted, fontSize: 12, marginTop: -8 }, clockLink: { color: colors.forest, textAlign: 'center', fontSize: 12, fontWeight: '700' },
+  elapsed: { color: colors.ink, fontSize: 30, fontWeight: '800', letterSpacing: -1 }, clockHint: { color: colors.muted, fontSize: 12, marginTop: -8 }, clockError: { color: colors.red, backgroundColor: colors.redSoft, borderRadius: 8, padding: 9, fontSize: 10, lineHeight: 15, textAlign: 'center' }, clockLink: { color: colors.forest, textAlign: 'center', fontSize: 12, fontWeight: '700' },
   coverageRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 7 }, coverageTime: { color: colors.muted, fontSize: 11, width: 50 },
   coverageTrack: { flex: 1, height: 7, backgroundColor: colors.surfaceSoft, borderRadius: 4, overflow: 'hidden' }, coverageFill: { height: '100%', backgroundColor: colors.forest, borderRadius: 4 }, coverageValue: { color: colors.ink, fontSize: 11, fontWeight: '800' },
   coverageNote: { color: '#9B542C', backgroundColor: colors.orangeSoft, padding: 10, borderRadius: 9, marginTop: 10, fontSize: 11, lineHeight: 16 },

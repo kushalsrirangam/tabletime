@@ -6,11 +6,11 @@ This is the permanent project checkpoint. Read it before development work and up
 
 ## Current overall progress
 
-Approximately **75% complete**.
+Approximately **78% complete**.
 
-- Design and interactive MVP: **92%**
+- Design and interactive MVP: **94%**
 - Database foundation: **98%**
-- Live backend connection: **78%**
+- Live backend connection: **86%**
 - Advanced restaurant features: **15%**
 - Store publication: **25%**
 
@@ -80,6 +80,14 @@ Approximately **75% complete**.
 - Vercel Production and Preview environments configured with the client-safe `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; no service-role or secret key was uploaded
 - Public site verification returned HTTP 200 with title `TableTime`
 - Browser verification confirmed the Supabase-backed sign-in/create-restaurant screen renders instead of demo mode, with no console errors or warnings
+- Signed-in workers now load their latest 20 RLS-protected time entries from Supabase, including an open punch outside the seven-day team-stat window
+- The active shift is derived from the authenticated workspace employee instead of the demo employee ID
+- Clock-in and clock-out actions now call the verified `clock_in` and `clock_out` Supabase RPCs and refresh server-authoritative punch data after completion
+- Clock actions prevent duplicate submissions and expose clear loading, session, employee-assignment, already-clocked-in, no-open-shift, and network error states
+- The time-clock and dashboard use the live restaurant location and timezone for punch labels and history
+- Live punch history includes loading, empty, error, and retry states; demo mode retains its local clock behavior
+- The unsaved demo break control is hidden for configured cloud accounts until a dedicated live break write path exists
+- React component quality review passed for async flow, timer state, accessibility alerts, and render behavior
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -87,7 +95,7 @@ Approximately **75% complete**.
 
 - End-to-end owner, manager, and employee RLS behavior
 - Owner sign-up, email confirmation, and bootstrap using a real user account
-- Successful clock-in and clock-out calls from an authenticated employee
+- Successful clock-in and clock-out calls, authoritative refresh, and personal punch-history reads from an authenticated employee
 - New-user profile trigger after the first real account is created
 - Live schedule, team, punch, and request reads from the app
 - Live workspace identity and role loading with a real authenticated account
@@ -99,16 +107,16 @@ Approximately **75% complete**.
 - The pre-existing cloud project named `kushalsrirangam's Project` remains untouched.
 - Supabase Security Advisor reports three intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap and clock RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
 - Performance Advisor reports only unused-index informational notices. This is expected while the new database is empty; index usage must be reassessed after realistic traffic. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
-- Configured cloud accounts now use live employees and schedules. Clock controls, break controls, and requests still use demo/local state until their dedicated backend tasks are completed.
+- Clock-in, clock-out, and personal punch history are now wired to the live database but still require a real authenticated employee test. Breaks and requests remain demo/local because the database does not yet expose a break write RPC and request actions are not yet connected.
 - npm reports 10 moderate issues in transitive Expo build tooling. The suggested forced fix would perform an unsafe Expo downgrade, so it was not applied.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
 
 ## Next work in order
 
-1. Connect clock actions and punch history to the verified server RPC functions.
-2. Connect requests and approvals to the live database.
-3. Add Realtime updates and offline/error handling.
-4. Create a real owner account and run end-to-end onboarding plus tenant-isolation tests using owner, manager, and employee accounts.
+1. Connect requests and manager approvals to the live database.
+2. Add secure break start/end RPCs and synchronize live break state.
+3. Add Realtime updates plus resilient offline/retry handling.
+4. Create a real owner account and run end-to-end onboarding, clock, schedule, request, and tenant-isolation tests using owner, manager, and employee accounts.
 5. Prepare native Android and iOS release builds, store assets, privacy disclosures, and store submissions after the live workflows are verified.
 
 ## Rule for future updates

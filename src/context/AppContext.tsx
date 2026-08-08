@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { employees as initialEmployees, initialRequests, shifts as initialShifts } from '../data';
 import { supabase } from '../lib/supabase';
-import { ClockEntry, Employee, NewShiftInput, NewTimeOffInput, Shift, StaffRequest, UserRole } from '../types';
+import { ClockEntry, Employee, EmploymentStatus, NewShiftInput, NewTimeOffInput, SaveEmployeeInput, Shift, StaffRequest, UserRole, WorkLocation } from '../types';
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = '@tabletime/state-v1';
@@ -12,6 +12,7 @@ type StoredState = {
   onBreak: boolean;
   requests: StaffRequest[];
   shifts: Shift[];
+  employees: Employee[];
 };
 
 type AppContextValue = StoredState & {
@@ -22,6 +23,7 @@ type AppContextValue = StoredState & {
   clockActionLoading: boolean;
   clockActionError?: string;
   employees: Employee[];
+  locations: WorkLocation[];
   role: UserRole;
   activeEntry?: ClockEntry;
   setRole: (role: UserRole) => void;
@@ -31,12 +33,14 @@ type AppContextValue = StoredState & {
   resolveRequest: (id: string, status: 'approved' | 'declined') => void;
   addTimeOffRequest: (input: NewTimeOffInput) => void;
   addShift: (input: NewShiftInput) => Promise<string | undefined>;
+  saveEmployee: (input: SaveEmployeeInput) => Promise<void>;
   publishSchedule: () => Promise<void>;
   refreshLiveData: () => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
 const employeeColors = ['#286B50', '#D8793D', '#497B9B', '#9C6AA2', '#A56B47', '#617C52'];
+const demoLocations: WorkLocation[] = [{ id: 'demo-main', name: 'The Juniper Room' }];
 
 function initialsFor(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'TT';
@@ -60,6 +64,20 @@ function clockErrorMessage(message: string, action: 'in' | 'out') {
   return `Clock-${action} could not be completed. ${message}`;
 }
 
+function employeeErrorMessage(message: string) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes('employees_org_normalized_email_idx') || normalized.includes('duplicate key')) return 'An employee with that work email already exists.';
+  if (normalized.includes('row-level security') || normalized.includes('permission denied')) return 'Only an owner or manager can change employee details.';
+  if (normalized.includes('0 rows') || normalized.includes('json object requested')) return 'This employee could not be updated. You cannot deactivate your own connected profile.';
+  if (normalized.includes('check constraint')) return 'One or more employee details are not valid. Review the form and try again.';
+  return `Employee details could not be saved. ${message}`;
+}
+
+function normalizedEmploymentStatus(value: string): EmploymentStatus {
+  if (value === 'inactive' || value === 'invited') return value;
+  return 'active';
+}
+
 export function AppProvider({ children }: PropsWithChildren) {
   const { backendConfigured, session, workspace } = useAuth();
   const [demoRole, setDemoRole] = useState<UserRole>('manager');
@@ -70,6 +88,7 @@ export function AppProvider({ children }: PropsWithChildren) {
   const [clockActionError, setClockActionError] = useState<string>();
   const clockActionInFlight = useRef(false);
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [locations, setLocations] = useState<WorkLocation[]>(demoLocations);
   const [clockEntries, setClockEntries] = useState<ClockEntry[]>([]);
   const [onBreak, setOnBreak] = useState(false);
   const [requests, setRequests] = useState<StaffRequest[]>(initialRequests);
@@ -88,6 +107,7 @@ export function AppProvider({ children }: PropsWithChildren) {
         const saved = JSON.parse(raw) as StoredState;
         setClockEntries(saved.clockEntries ?? []);
         setOnBreak(saved.onBreak ?? false);
+        setEmployees(saved.employees ?? initialEmployees);
         setRequests(saved.requests ?? initialRequests);
         setShifts(saved.shifts ?? initialShifts);
       })
@@ -104,8 +124,8 @@ export function AppProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!hydrated || backendConfigured) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ clockEntries, onBreak, requests, shifts })).catch(() => undefined);
-  }, [backendConfigured, clockEntries, hydrated, onBreak, requests, shifts]);
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ clockEntries, onBreak, requests, shifts, employees })).catch(() => undefined);
+  }, [backendConfigured, clockEntries, employees, hydrated, onBreak, requests, shifts]);
 
   const refreshLiveData = useCallback(async () => {
     if (!backendConfigured || !workspace || !supabase) {
@@ -127,14 +147,15 @@ export function AppProvider({ children }: PropsWithChildren) {
     const personalTimeQuery = workspace.employeeId
       ? supabase.from('time_entries').select('id, employee_id, clocked_in_at, clocked_out_at').eq('organization_id', workspace.organizationId).eq('employee_id', workspace.employeeId).order('clocked_in_at', { ascending: false }).limit(20)
       : Promise.resolve({ data: [], error: null });
-    const [employeeResult, shiftResult, timeResult, personalTimeResult] = await Promise.all([
-      supabase.from('employees').select('id, full_name, email, job_title, employment_status').eq('organization_id', workspace.organizationId).neq('employment_status', 'inactive').order('full_name'),
+    const [employeeResult, locationResult, shiftResult, timeResult, personalTimeResult] = await Promise.all([
+      supabase.from('employees').select('id, full_name, email, phone, job_title, hourly_rate_cents, employment_status, primary_location_id, user_id').eq('organization_id', workspace.organizationId).order('full_name'),
+      supabase.from('locations').select('id, name').eq('organization_id', workspace.organizationId).order('name'),
       supabase.from('shifts').select('id, employee_id, starts_at, ends_at, position, status').eq('organization_id', workspace.organizationId).neq('status', 'cancelled').gte('starts_at', rangeStart.toISOString()).lt('starts_at', rangeEnd.toISOString()).order('starts_at'),
       supabase.from('time_entries').select('employee_id, clocked_in_at, clocked_out_at').eq('organization_id', workspace.organizationId).gte('clocked_in_at', timeRangeStart.toISOString()),
       personalTimeQuery,
     ]);
 
-    const error = employeeResult.error ?? shiftResult.error ?? timeResult.error ?? personalTimeResult.error;
+    const error = employeeResult.error ?? locationResult.error ?? shiftResult.error ?? timeResult.error ?? personalTimeResult.error;
     if (error) {
       setDataError(error.message);
       setDataLoading(false);
@@ -150,14 +171,23 @@ export function AppProvider({ children }: PropsWithChildren) {
       if (!entry.clocked_out_at) workingEmployees.add(entry.employee_id);
     }
 
+    const liveLocations = locationResult.data ?? [];
+    const locationNames = new Map(liveLocations.map((location) => [location.id, location.name]));
+    setLocations(liveLocations);
     setEmployees((employeeResult.data ?? []).map((employee, index) => ({
       id: employee.id,
       name: employee.full_name,
       email: employee.email ?? undefined,
+      phone: employee.phone ?? undefined,
       initials: initialsFor(employee.full_name),
       role: employee.job_title,
       color: employeeColors[index % employeeColors.length],
       status: workingEmployees.has(employee.id) ? 'clocked-in' : 'off',
+      employmentStatus: normalizedEmploymentStatus(employee.employment_status),
+      primaryLocationId: employee.primary_location_id ?? undefined,
+      primaryLocationName: employee.primary_location_id ? locationNames.get(employee.primary_location_id) : undefined,
+      hourlyRateCents: employee.hourly_rate_cents ?? undefined,
+      userId: employee.user_id ?? undefined,
       weeklyHours: Math.round((hoursByEmployee.get(employee.id) ?? 0) * 10) / 10,
     })));
 
@@ -307,6 +337,65 @@ export function AppProvider({ children }: PropsWithChildren) {
     setShifts((current) => [...current, { id: `shift-${Date.now()}`, ...input, published: false }]);
   }, [backendConfigured, refreshLiveData, session, workspace]);
 
+  const saveEmployee = useCallback(async (input: SaveEmployeeInput) => {
+    const normalizedEmail = input.email?.trim().toLowerCase() || undefined;
+    const normalizedPhone = input.phone?.trim() || undefined;
+    const normalizedInput = { ...input, name: input.name.trim(), role: input.role.trim(), email: normalizedEmail, phone: normalizedPhone };
+    if (!backendConfigured) {
+      const duplicateEmail = normalizedEmail && employees.some((employee) => employee.id !== input.id && employee.email?.toLowerCase() === normalizedEmail);
+      if (duplicateEmail) throw new Error('An employee with that work email already exists.');
+      const locationName = locations.find((location) => location.id === input.primaryLocationId)?.name;
+      if (input.id) {
+        setEmployees((current) => current.map((employee) => employee.id === input.id ? {
+          ...employee,
+          name: normalizedInput.name,
+          email: normalizedEmail,
+          phone: normalizedPhone,
+          initials: initialsFor(normalizedInput.name),
+          role: normalizedInput.role,
+          primaryLocationId: input.primaryLocationId,
+          primaryLocationName: locationName,
+          hourlyRateCents: input.hourlyRateCents,
+          employmentStatus: input.employmentStatus,
+          status: input.employmentStatus === 'inactive' ? 'off' : employee.status,
+        } : employee));
+        return;
+      }
+      setEmployees((current) => [...current, {
+        id: `employee-${Date.now()}`,
+        name: normalizedInput.name,
+        email: normalizedEmail,
+        phone: normalizedPhone,
+        initials: initialsFor(normalizedInput.name),
+        role: normalizedInput.role,
+        color: employeeColors[current.length % employeeColors.length],
+        status: 'off',
+        employmentStatus: input.employmentStatus,
+        primaryLocationId: input.primaryLocationId,
+        primaryLocationName: locationName,
+        hourlyRateCents: input.hourlyRateCents,
+        weeklyHours: 0,
+      }]);
+      return;
+    }
+
+    if (!supabase || !session || !workspace) throw new Error('Sign in again before changing employee details.');
+    const payload = {
+      primary_location_id: input.primaryLocationId || null,
+      full_name: normalizedInput.name,
+      email: normalizedEmail ?? null,
+      phone: normalizedPhone ?? null,
+      job_title: normalizedInput.role,
+      hourly_rate_cents: input.hourlyRateCents ?? null,
+      employment_status: input.employmentStatus,
+    };
+    const result = input.id
+      ? await supabase.from('employees').update(payload).eq('organization_id', workspace.organizationId).eq('id', input.id).select('id').single()
+      : await supabase.from('employees').insert({ organization_id: workspace.organizationId, ...payload }).select('id').single();
+    if (result.error) throw new Error(employeeErrorMessage(result.error.message));
+    await refreshLiveData();
+  }, [backendConfigured, employees, locations, refreshLiveData, session, workspace]);
+
   const publishSchedule = useCallback(async () => {
     if (backendConfigured) {
       if (!supabase || !workspace) return;
@@ -322,9 +411,9 @@ export function AppProvider({ children }: PropsWithChildren) {
   }, [backendConfigured, refreshLiveData, workspace]);
 
   const value = useMemo(() => ({
-    hydrated, dataLoading, dataError, liveClockEnabled: backendConfigured, clockActionLoading, clockActionError, employees, role, setRole: setDemoRole, clockEntries, activeEntry, onBreak, requests, shifts,
-    clockIn, clockOut, toggleBreak, resolveRequest, addTimeOffRequest, addShift, publishSchedule, refreshLiveData,
-  }), [activeEntry, addShift, addTimeOffRequest, backendConfigured, clockActionError, clockActionLoading, clockEntries, clockIn, clockOut, dataError, dataLoading, employees, hydrated, onBreak, publishSchedule, refreshLiveData, requests, resolveRequest, role, shifts, toggleBreak]);
+    hydrated, dataLoading, dataError, liveClockEnabled: backendConfigured, clockActionLoading, clockActionError, employees, locations, role, setRole: setDemoRole, clockEntries, activeEntry, onBreak, requests, shifts,
+    clockIn, clockOut, toggleBreak, resolveRequest, addTimeOffRequest, addShift, saveEmployee, publishSchedule, refreshLiveData,
+  }), [activeEntry, addShift, addTimeOffRequest, backendConfigured, clockActionError, clockActionLoading, clockEntries, clockIn, clockOut, dataError, dataLoading, employees, hydrated, locations, onBreak, publishSchedule, refreshLiveData, requests, resolveRequest, role, saveEmployee, shifts, toggleBreak]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

@@ -61,6 +61,7 @@ export function ScheduleScreen() {
   const [shiftRole, setShiftRole] = useState('Server');
   const [formError, setFormError] = useState<string>();
   const ownEmployeeId = workspace?.employeeId ?? 'e1';
+  const activeEmployees = employees.filter((employee) => employee.employmentStatus === 'active');
   const visibleShifts = role === 'employee' ? shifts.filter((shift) => shift.employeeId === ownEmployeeId) : shifts;
   const unpublishedCount = shifts.filter((shift) => !shift.published).length;
   const scheduledHours = visibleShifts.reduce((total, shift) => total + (shift.startsAt && shift.endsAt ? Math.max(0, new Date(shift.endsAt).getTime() - new Date(shift.startsAt).getTime()) / 3_600_000 : 0), 0);
@@ -93,7 +94,7 @@ export function ScheduleScreen() {
     setShiftDay(day.fullName);
     setShiftDate(day.label);
     setShiftDateIso(day.dateIso);
-    setSelectedEmployee((current) => current || employees[0]?.id || '');
+    setSelectedEmployee((current) => activeEmployees.some((employee) => employee.id === current) ? current : activeEmployees[0]?.id ?? '');
     setFormError(undefined);
     setModalOpen(true);
   };
@@ -104,7 +105,7 @@ export function ScheduleScreen() {
         eyebrow={`${days[0].label.toUpperCase()}–${days[6].label.toUpperCase()}`}
         title={role === 'manager' ? 'Team schedule' : 'My schedule'}
         subtitle={role === 'manager' ? 'Plan coverage, spot conflicts, and publish when you’re ready.' : 'Your confirmed shifts and total scheduled hours.'}
-        action={role === 'manager' && !mobile ? <View style={styles.titleActions}><Button label="Add shift" icon="add" variant="secondary" onPress={() => setModalOpen(true)} /><Button label={unpublishedCount === 0 ? 'Published' : `Publish ${unpublishedCount} drafts`} icon={unpublishedCount === 0 ? 'checkmark' : 'send-outline'} onPress={publishSchedule} /></View> : undefined}
+        action={role === 'manager' && !mobile ? <View style={styles.titleActions}><Button label="Add shift" icon="add" variant="secondary" onPress={() => openForDay(selectedDay)} /><Button label={unpublishedCount === 0 ? 'Published' : `Publish ${unpublishedCount} drafts`} icon={unpublishedCount === 0 ? 'checkmark' : 'send-outline'} onPress={publishSchedule} /></View> : undefined}
       />
       <Card style={styles.calendarCard}>
         {dataError ? <View style={styles.message}><Text style={styles.errorTitle}>Schedule data couldn’t load</Text><Text style={styles.messageCopy}>{dataError}</Text><Pressable onPress={refreshLiveData}><Text style={styles.retry}>Try again</Text></Pressable></View> : null}
@@ -158,10 +159,10 @@ export function ScheduleScreen() {
       <View style={styles.summaryBar}>
         <Text style={styles.summaryLabel}>Scheduled labor</Text><Text style={styles.summaryValue}>{scheduledHours.toFixed(1)} hours</Text>
         <View style={styles.summaryDivider} /><Text style={styles.summaryLabel}>Draft shifts</Text><Text style={styles.summaryValue}>{unpublishedCount}</Text>
-        {role === 'manager' && mobile ? <View style={styles.mobilePublish}><Button label="Add shift" compact variant="secondary" onPress={() => setModalOpen(true)} /><Button label={unpublishedCount === 0 ? 'Published' : 'Publish'} compact onPress={publishSchedule} /></View> : null}
+        {role === 'manager' && mobile ? <View style={styles.mobilePublish}><Button label="Add shift" compact variant="secondary" onPress={() => openForDay(selectedDay)} /><Button label={unpublishedCount === 0 ? 'Published' : 'Publish'} compact onPress={publishSchedule} /></View> : null}
       </View>
       <FormModal visible={modalOpen} title="Create a shift" subtitle="Add a team member to the schedule. New shifts remain drafts until published." submitLabel="Create shift" canSubmit={Boolean(selectedEmployee && shiftDate && start && end && shiftRole)} onClose={() => setModalOpen(false)} onSubmit={submitShift}>
-        <ChoiceField label="Employee" value={selectedEmployee} onChange={setSelectedEmployee} options={employees.map((employee) => ({ label: employee.name, value: employee.id }))} />
+        <ChoiceField label="Employee" value={selectedEmployee} onChange={setSelectedEmployee} options={activeEmployees.map((employee) => ({ label: employee.name, value: employee.id }))} />
         <ChoiceField label="Day" value={shiftDay} onChange={(value) => { const match = days.find((day) => day.fullName === value); if (match) { setShiftDay(match.fullName); setShiftDate(match.label); setShiftDateIso(match.dateIso); } }} options={days.map((day) => ({ label: `${day.name} ${day.date}`, value: day.fullName }))} />
         <View style={styles.formRow}><View style={styles.formField}><FormField label="Start time" value={start} placeholder="4:00 PM" onChangeText={setStart} /></View><View style={styles.formField}><FormField label="End time" value={end} placeholder="10:00 PM" onChangeText={setEnd} /></View></View>
         <FormField label="Position" value={shiftRole} placeholder="Server" onChangeText={setShiftRole} />

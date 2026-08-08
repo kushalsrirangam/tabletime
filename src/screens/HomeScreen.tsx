@@ -30,9 +30,10 @@ export function HomeScreen({ onNavigate }: { onNavigate: (tab: TabKey) => void }
     return () => clearInterval(interval);
   }, [activeEntry]);
 
-  const working = employees.filter((employee) => employee.status !== 'off');
+  const activeEmployees = employees.filter((employee) => employee.employmentStatus === 'active');
+  const working = activeEmployees.filter((employee) => employee.status !== 'off');
   const pending = requests.filter((request) => request.status === 'pending');
-  const laborHours = employees.reduce((sum, employee) => sum + employee.weeklyHours, 0);
+  const laborHours = activeEmployees.reduce((sum, employee) => sum + employee.weeklyHours, 0);
 
   return (
     <View>
@@ -46,7 +47,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (tab: TabKey) => void }
       {role === 'manager' ? (
         <>
           <View style={[styles.metrics, compact && styles.stack]}>
-            <Metric icon="people" label="On the floor" value={`${working.length}`} detail={`of ${employees.length} active`} tone="green" />
+            <Metric icon="people" label="On the floor" value={`${working.length}`} detail={`of ${activeEmployees.length} active`} tone="green" />
             <Metric icon="time" label="Labor, last 7 days" value={`${laborHours}h`} detail="Recorded time" tone="blue" />
             <Metric icon="alert-circle" label="Needs attention" value={`${pending.length}`} detail="pending requests" tone="orange" />
           </View>

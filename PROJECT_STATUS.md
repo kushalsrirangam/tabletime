@@ -6,12 +6,12 @@ This is the permanent project checkpoint. Read it before development work and up
 
 ## Current overall progress
 
-Approximately **78% complete**.
+Approximately **81% complete**.
 
-- Design and interactive MVP: **94%**
-- Database foundation: **98%**
-- Live backend connection: **86%**
-- Advanced restaurant features: **15%**
+- Design and interactive MVP: **97%**
+- Database foundation: **99%**
+- Live backend connection: **91%**
+- Advanced restaurant features: **24%**
 - Store publication: **25%**
 
 ## Completed and verified
@@ -88,6 +88,18 @@ Approximately **78% complete**.
 - Live punch history includes loading, empty, error, and retry states; demo mode retains its local clock behavior
 - The unsaved demo break control is hidden for configured cloud accounts until a dedicated live break write path exists
 - React component quality review passed for async flow, timer state, accessibility alerts, and render behavior
+- Managers can add live employee roster records with name, work email, phone, job title, hourly rate, primary location, and employment status
+- Managers can edit existing employee details and activate or deactivate staff from the responsive team screen
+- Team search now covers name, email, job title, and location; status filters cover active, invited, and inactive employees
+- Inactive employees remain visible for management and historical integrity but are excluded from active dashboard counts, labor totals, and new-shift selection
+- Live employee and location reads now include all roster statuses and typed workforce details; demo add/edit behavior remains locally persistent
+- Employee records use deactivation instead of destructive deletion so schedule, punch, and request history remains intact
+- Normalized employee work emails are unique per restaurant and employee name, job title, email, and phone constraints are enforced in Postgres
+- Authenticated employee writes are restricted to approved workforce columns; public clients cannot change linked Auth user IDs, tenant ownership, database IDs, or timestamps
+- The signed-in manager cannot deactivate their own connected employee profile; another authorized manager can manage that record
+- Cloud migrations `add_employee_management_safeguards` and `restrict_employee_write_columns` applied and their constraints, index, RLS policy, grants, and migration history verified
+- Transactional cloud verification confirmed valid employee insertion, case-insensitive duplicate-email rejection, invalid-email rejection, blocked employee deletion, and blocked Auth-user reassignment; all test rows were rolled back
+- Supabase Security and Performance Advisors rerun after employee-management hardening with no new warnings
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -99,6 +111,7 @@ Approximately **78% complete**.
 - New-user profile trigger after the first real account is created
 - Live schedule, team, punch, and request reads from the app
 - Live workspace identity and role loading with a real authenticated account
+- Employee creation, editing, location assignment, pay updates, and activation/deactivation using a real owner or manager account
 
 ## Failures and blockers
 
@@ -108,16 +121,19 @@ Approximately **78% complete**.
 - Supabase Security Advisor reports three intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap and clock RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
 - Performance Advisor reports only unused-index informational notices. This is expected while the new database is empty; index usage must be reassessed after realistic traffic. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
 - Clock-in, clock-out, and personal punch history are now wired to the live database but still require a real authenticated employee test. Breaks and requests remain demo/local because the database does not yet expose a break write RPC and request actions are not yet connected.
+- Employee roster add/edit/deactivate is wired to the live database but still requires a real authenticated owner or manager test.
+- Creating an employee roster record does not yet create an Auth account or send an invitation email. Secure invitations require a protected server-side Auth workflow; no service-role key is exposed in the app.
 - npm reports 10 moderate issues in transitive Expo build tooling. The suggested forced fix would perform an unsafe Expo downgrade, so it was not applied.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
 
 ## Next work in order
 
-1. Connect requests and manager approvals to the live database.
-2. Add secure break start/end RPCs and synchronize live break state.
-3. Add Realtime updates plus resilient offline/retry handling.
-4. Create a real owner account and run end-to-end onboarding, clock, schedule, request, and tenant-isolation tests using owner, manager, and employee accounts.
-5. Prepare native Android and iOS release builds, store assets, privacy disclosures, and store submissions after the live workflows are verified.
+1. Add secure employee invitation emails and Auth-account linking through protected server-side code.
+2. Connect requests and manager approvals to the live database.
+3. Add secure break start/end RPCs and synchronize live break state.
+4. Add Realtime updates plus resilient offline/retry handling.
+5. Create real owner, manager, and employee accounts and run end-to-end onboarding, employee-management, clock, schedule, request, and tenant-isolation tests.
+6. Prepare native Android and iOS release builds, store assets, privacy disclosures, and store submissions after the live workflows are verified.
 
 ## Rule for future updates
 

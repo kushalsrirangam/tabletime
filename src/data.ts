@@ -1,12 +1,12 @@
 import { Employee, Shift, StaffRequest } from './types';
 
 export const employees: Employee[] = [
-  { id: 'e1', name: 'Jordan Lee', initials: 'JL', role: 'General Manager', color: '#286B50', status: 'clocked-in', weeklyHours: 31.5 },
-  { id: 'e2', name: 'Maya Brooks', initials: 'MB', role: 'Server', color: '#D8793D', status: 'clocked-in', weeklyHours: 27 },
-  { id: 'e3', name: 'Ethan Rivera', initials: 'ER', role: 'Line Cook', color: '#497B9B', status: 'break', weeklyHours: 34.5 },
-  { id: 'e4', name: 'Nora Patel', initials: 'NP', role: 'Bartender', color: '#9C6AA2', status: 'clocked-in', weeklyHours: 22 },
-  { id: 'e5', name: 'Liam Chen', initials: 'LC', role: 'Host', color: '#A56B47', status: 'off', weeklyHours: 18.5 },
-  { id: 'e6', name: 'Sofia Martinez', initials: 'SM', role: 'Prep Cook', color: '#617C52', status: 'off', weeklyHours: 29 },
+  { id: 'e1', name: 'Jordan Lee', initials: 'JL', role: 'General Manager', color: '#286B50', status: 'clocked-in', employmentStatus: 'active', primaryLocationId: 'demo-main', primaryLocationName: 'The Juniper Room', weeklyHours: 31.5 },
+  { id: 'e2', name: 'Maya Brooks', initials: 'MB', role: 'Server', color: '#D8793D', status: 'clocked-in', employmentStatus: 'active', primaryLocationId: 'demo-main', primaryLocationName: 'The Juniper Room', weeklyHours: 27 },
+  { id: 'e3', name: 'Ethan Rivera', initials: 'ER', role: 'Line Cook', color: '#497B9B', status: 'break', employmentStatus: 'active', primaryLocationId: 'demo-main', primaryLocationName: 'The Juniper Room', weeklyHours: 34.5 },
+  { id: 'e4', name: 'Nora Patel', initials: 'NP', role: 'Bartender', color: '#9C6AA2', status: 'clocked-in', employmentStatus: 'active', primaryLocationId: 'demo-main', primaryLocationName: 'The Juniper Room', weeklyHours: 22 },
+  { id: 'e5', name: 'Liam Chen', initials: 'LC', role: 'Host', color: '#A56B47', status: 'off', employmentStatus: 'active', primaryLocationId: 'demo-main', primaryLocationName: 'The Juniper Room', weeklyHours: 18.5 },
+  { id: 'e6', name: 'Sofia Martinez', initials: 'SM', role: 'Prep Cook', color: '#617C52', status: 'off', employmentStatus: 'active', primaryLocationId: 'demo-main', primaryLocationName: 'The Juniper Room', weeklyHours: 29 },
 ];
 
 export const shifts: Shift[] = [
@@ -25,4 +25,3 @@ export const initialRequests: StaffRequest[] = [
   { id: 'r2', employeeId: 'e4', type: 'Shift swap', detail: 'Saturday, 4:00–11:00 PM', createdAt: 'Yesterday', status: 'pending' },
   { id: 'r3', employeeId: 'e3', type: 'Missed punch', detail: 'Tuesday · Clock-out at 10:14 PM', createdAt: 'Aug 5', status: 'approved' },
 ];
-

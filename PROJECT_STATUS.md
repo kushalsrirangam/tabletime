@@ -6,13 +6,13 @@ This is the permanent project checkpoint. Read it before development work and up
 
 ## Current overall progress
 
-Approximately **72% complete**.
+Approximately **75% complete**.
 
 - Design and interactive MVP: **92%**
 - Database foundation: **98%**
-- Live backend connection: **75%**
+- Live backend connection: **78%**
 - Advanced restaurant features: **15%**
-- Store publication: **10%**
+- Store publication: **25%**
 
 ## Completed and verified
 
@@ -74,6 +74,12 @@ Approximately **72% complete**.
 - Git repository published to `https://github.com/kushalsrirangam/tabletime.git` on branch `main`
 - Initial GitHub commit `9d2b0d0` pushed successfully with Git Credential Manager
 - Vercel production project creation accepted as `tabletime`; deployment `dpl_BAqzfwYW5dLBu6gNxTAoZcQZ5e2E` was assigned a production deployment URL
+- GitHub OAuth for Vercel completed and repository `kushalsrirangam/tabletime` linked to Vercel project `tabletime-3qn4`
+- Public production site deployed and verified at `https://tabletime-3qn4.vercel.app`
+- Production deployment `dpl_FVcXTajwNnJrNbqMNK2LrqQbYk3V` reached `Ready` in 31 seconds from Git commit `6b2e200`
+- Vercel Production and Preview environments configured with the client-safe `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; no service-role or secret key was uploaded
+- Public site verification returned HTTP 200 with title `TableTime`
+- Browser verification confirmed the Supabase-backed sign-in/create-restaurant screen renders instead of demo mode, with no console errors or warnings
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -88,7 +94,7 @@ Approximately **72% complete**.
 
 ## Failures and blockers
 
-- The Vercel API accepted production deployment `dpl_BAqzfwYW5dLBu6gNxTAoZcQZ5e2E`, but the assigned URL redirects to Vercel login/protection and the connector cannot retrieve the project. The Vercel Git import flow for `kushalsrirangam/tabletime` now reaches GitHub's secure OAuth sign-in page in the visible in-app browser. The user must complete that one-time GitHub sign-in; passwords and passkeys are not accessible to Codex. After authorization, resume the open import flow, configure the Expo web build and public Supabase variables, deploy, and verify the production URL.
+- The connected Vercel API tool still lists no projects even though the browser dashboard shows the verified `tabletime-3qn4` project and production deployment. Dashboard deployment and the public URL work correctly, but connector-based monitoring remains unavailable until the two Vercel sessions are reconciled.
 - Docker Desktop's Linux engine returned an internal API error. Local Supabase still cannot start, although both migrations are now applied and verified in the dedicated cloud project.
 - The pre-existing cloud project named `kushalsrirangam's Project` remains untouched.
 - Supabase Security Advisor reports three intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap and clock RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
@@ -99,11 +105,11 @@ Approximately **72% complete**.
 
 ## Next work in order
 
-1. Complete the visible GitHub OAuth sign-in for Vercel, resume the open repository import, configure the Expo web build and public Supabase variables, deploy, and verify the public production URL.
-2. Connect clock actions and punch history to the verified server RPC functions.
-3. Connect requests and approvals to the live database.
-4. Add Realtime updates and offline/error handling.
-5. Create a real owner account and run end-to-end onboarding plus tenant-isolation tests using owner, manager, and employee accounts.
+1. Connect clock actions and punch history to the verified server RPC functions.
+2. Connect requests and approvals to the live database.
+3. Add Realtime updates and offline/error handling.
+4. Create a real owner account and run end-to-end onboarding plus tenant-isolation tests using owner, manager, and employee accounts.
+5. Prepare native Android and iOS release builds, store assets, privacy disclosures, and store submissions after the live workflows are verified.
 
 ## Rule for future updates
 

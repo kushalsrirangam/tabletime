@@ -1,6 +1,6 @@
 # TableTime project status
 
-Last updated: August 7, 2026
+Last updated: August 8, 2026
 
 This is the permanent project checkpoint. Read it before development work and update it after every task.
 
@@ -88,7 +88,7 @@ Approximately **72% complete**.
 
 ## Failures and blockers
 
-- The Vercel API accepted production deployment `dpl_BAqzfwYW5dLBu6gNxTAoZcQZ5e2E`, but the assigned URL currently redirects to Vercel login/protection and the connector cannot retrieve the new project afterward. Sign in once in the in-app Vercel browser, then inspect the deployment, enable a public production URL if needed, and link the GitHub repository for automatic future deployments.
+- The Vercel API accepted production deployment `dpl_BAqzfwYW5dLBu6gNxTAoZcQZ5e2E`, but the assigned URL redirects to Vercel login/protection and the connector cannot retrieve the project. The Vercel Git import flow for `kushalsrirangam/tabletime` now reaches GitHub's secure OAuth sign-in page in the visible in-app browser. The user must complete that one-time GitHub sign-in; passwords and passkeys are not accessible to Codex. After authorization, resume the open import flow, configure the Expo web build and public Supabase variables, deploy, and verify the production URL.
 - Docker Desktop's Linux engine returned an internal API error. Local Supabase still cannot start, although both migrations are now applied and verified in the dedicated cloud project.
 - The pre-existing cloud project named `kushalsrirangam's Project` remains untouched.
 - Supabase Security Advisor reports three intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap and clock RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
@@ -99,7 +99,7 @@ Approximately **72% complete**.
 
 ## Next work in order
 
-1. Complete the one-time Vercel dashboard sign-in, verify the production deployment, make its production URL public, and link `kushalsrirangam/tabletime` for automatic future deployments.
+1. Complete the visible GitHub OAuth sign-in for Vercel, resume the open repository import, configure the Expo web build and public Supabase variables, deploy, and verify the public production URL.
 2. Connect clock actions and punch history to the verified server RPC functions.
 3. Connect requests and approvals to the live database.
 4. Add Realtime updates and offline/error handling.

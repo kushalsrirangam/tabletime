@@ -1,17 +1,17 @@
 # TableTime project status
 
-Last updated: August 8, 2026
+Last updated: August 15, 2026
 
 This is the permanent project checkpoint. Read it before development work and update it after every task.
 
 ## Current overall progress
 
-Approximately **81% complete**.
+Approximately **83% complete**.
 
 - Design and interactive MVP: **97%**
 - Database foundation: **99%**
-- Live backend connection: **91%**
-- Advanced restaurant features: **24%**
+- Live backend connection: **95%**
+- Advanced restaurant features: **26%**
 - Store publication: **25%**
 
 ## Completed and verified
@@ -100,17 +100,27 @@ Approximately **81% complete**.
 - Cloud migrations `add_employee_management_safeguards` and `restrict_employee_write_columns` applied and their constraints, index, RLS policy, grants, and migration history verified
 - Transactional cloud verification confirmed valid employee insertion, case-insensitive duplicate-email rejection, invalid-email rejection, blocked employee deletion, and blocked Auth-user reassignment; all test rows were rolled back
 - Supabase Security and Performance Advisors rerun after employee-management hardening with no new warnings
+- Employee roster privacy tightened so employees can read only their own workforce row and membership; owners/managers retain restaurant-wide access
+- Cloud migration `restrict_employee_and_membership_visibility` applied and its two replacement SELECT policies verified against authenticated manager and employee identities
+- Two email-confirmed test identities created safely through the authenticated Supabase dashboard; their passwords are intentionally not stored in Git or this status file
+- An isolated `TableTime Test Restaurant` workspace now contains one manager, one employee, one location, and two published sample shifts
+- New-user profile trigger verified with both real Auth identities
+- Transactional RLS verification passed: the manager could read 2 memberships, 2 employee rows, and 2 shifts, while the employee could read only their own membership, employee row, and published shift
+- Live browser login passed for both roles on the Vercel production app
+- Manager browser verification confirmed real workspace identity, both roster members, hourly workforce data access, and employee edit controls
+- Employee browser verification confirmed real workspace identity, no Team management navigation, and exactly one personal published shift totaling 5 hours
+- The production browser is left signed in as the manager test account for review
+- Post-test verification passed: TypeScript produced no errors, and the production HTML and JavaScript bundle both returned HTTP 200
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
 ## Built but not yet verified with real application users
 
-- End-to-end owner, manager, and employee RLS behavior
+- End-to-end owner onboarding and owner-specific RLS behavior
 - Owner sign-up, email confirmation, and bootstrap using a real user account
 - Successful clock-in and clock-out calls, authoritative refresh, and personal punch-history reads from an authenticated employee
-- New-user profile trigger after the first real account is created
-- Live schedule, team, punch, and request reads from the app
-- Live workspace identity and role loading with a real authenticated account
+- Live punch and request reads from the app
+- Live workspace identity and role loading for an owner account
 - Employee creation, editing, location assignment, pay updates, and activation/deactivation using a real owner or manager account
 
 ## Failures and blockers
@@ -119,8 +129,10 @@ Approximately **81% complete**.
 - Docker Desktop's Linux engine returned an internal API error. Local Supabase still cannot start, although both migrations are now applied and verified in the dedicated cloud project.
 - The pre-existing cloud project named `kushalsrirangam's Project` remains untouched.
 - Supabase Security Advisor reports three intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap and clock RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
-- Performance Advisor reports only unused-index informational notices. This is expected while the new database is empty; index usage must be reassessed after realistic traffic. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
+- Supabase leaked-password protection is still disabled and should be enabled before launch. See the [password-security guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+- Performance Advisor reports only unused-index informational notices. This is expected before realistic traffic; index usage must be reassessed after production-like usage. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
 - Clock-in, clock-out, and personal punch history are now wired to the live database but still require a real authenticated employee test. Breaks and requests remain demo/local because the database does not yet expose a break write RPC and request actions are not yet connected.
+- Signed-in manager and employee navigation still shows the demo pending-request count of `2` because requests are not yet loaded from Supabase.
 - Employee roster add/edit/deactivate is wired to the live database but still requires a real authenticated owner or manager test.
 - Creating an employee roster record does not yet create an Auth account or send an invitation email. Secure invitations require a protected server-side Auth workflow; no service-role key is exposed in the app.
 - npm reports 10 moderate issues in transitive Expo build tooling. The suggested forced fix would perform an unsafe Expo downgrade, so it was not applied.
@@ -128,12 +140,13 @@ Approximately **81% complete**.
 
 ## Next work in order
 
-1. Add secure employee invitation emails and Auth-account linking through protected server-side code.
-2. Connect requests and manager approvals to the live database.
-3. Add secure break start/end RPCs and synchronize live break state.
-4. Add Realtime updates plus resilient offline/retry handling.
-5. Create real owner, manager, and employee accounts and run end-to-end onboarding, employee-management, clock, schedule, request, and tenant-isolation tests.
-6. Prepare native Android and iOS release builds, store assets, privacy disclosures, and store submissions after the live workflows are verified.
+1. Run live employee clock-in, clock-out, and personal history tests with the new test account.
+2. Add secure employee invitation emails and Auth-account linking through protected server-side code.
+3. Connect requests and manager approvals to the live database, replacing the remaining demo request count.
+4. Add secure break start/end RPCs and synchronize live break state.
+5. Test employee add/edit/location/pay/status workflows through the manager UI, then test real owner onboarding.
+6. Add Realtime updates plus resilient offline/retry handling.
+7. Prepare native Android and iOS release builds, store assets, privacy disclosures, and store submissions after the live workflows are verified.
 
 ## Rule for future updates
 

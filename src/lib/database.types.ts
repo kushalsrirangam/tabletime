@@ -516,6 +516,7 @@ export type Database = {
         Returns: string
       }
       clock_out: { Args: never; Returns: string }
+      end_break: { Args: never; Returns: string }
       finalize_employee_invitation: {
         Args: {
           p_actor_user_id: string
@@ -527,6 +528,20 @@ export type Database = {
           invited_email: string
           organization_id: string
         }[]
+      }
+      review_staff_request: {
+        Args: { p_decision: string; p_request_id: string }
+        Returns: string
+      }
+      start_break: { Args: never; Returns: string }
+      submit_time_off_request: {
+        Args: {
+          p_details?: string
+          p_ends_on?: string
+          p_organization_id: string
+          p_starts_on: string
+        }
+        Returns: string
       }
     }
     Enums: {

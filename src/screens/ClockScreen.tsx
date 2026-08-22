@@ -24,6 +24,8 @@ export function ClockScreen() {
     liveClockEnabled,
     clockActionLoading,
     clockActionError,
+    breakActionLoading,
+    breakActionError,
     dataLoading,
     dataError,
     refreshLiveData,
@@ -52,20 +54,20 @@ export function ClockScreen() {
           <Text style={styles.date}>{new Date(now).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', timeZone })}</Text>
           {activeEntry ? <Text style={styles.started}>Clocked in at {new Date(activeEntry.clockIn).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone })}</Text> : <Text style={styles.started}>Ready to start your shift</Text>}
           <View style={[styles.actions, compact && styles.stackActions]}>
-            {activeEntry && !liveClockEnabled ? <Button label={onBreak ? 'End break' : 'Start break'} icon="cafe-outline" variant="secondary" onPress={toggleBreak} /> : null}
+            {activeEntry ? <Button label={breakActionLoading ? (onBreak ? 'Ending break…' : 'Starting break…') : onBreak ? 'End break' : 'Start break'} icon="cafe-outline" variant="secondary" loading={breakActionLoading} disabled={clockActionLoading || breakActionLoading || (liveClockEnabled && dataLoading)} onPress={() => { void toggleBreak(); }} /> : null}
             <Button
               label={clockActionLoading ? (activeEntry ? 'Clocking out…' : 'Clocking in…') : activeEntry ? 'Clock out' : 'Clock in'}
               icon={activeEntry ? 'stop-circle-outline' : 'play-circle-outline'}
               variant={activeEntry ? 'danger' : 'primary'}
               loading={clockActionLoading}
-              disabled={clockActionLoading || (liveClockEnabled && dataLoading)}
+              disabled={clockActionLoading || breakActionLoading || (liveClockEnabled && dataLoading)}
               onPress={handleClockAction}
             />
           </View>
-          {clockActionError ? <Text accessibilityRole="alert" style={styles.actionError}>{clockActionError}</Text> : null}
+          {breakActionError || clockActionError ? <Text accessibilityRole="alert" style={styles.actionError}>{breakActionError ?? clockActionError}</Text> : null}
           <View style={styles.verified}>
             <Ionicons name={liveClockEnabled ? 'cloud-done-outline' : 'phone-portrait-outline'} size={14} color={colors.forest} />
-            <Text style={styles.verifiedText}>{liveClockEnabled ? `Punches sync to ${locationName}` : 'Demo mode · stored on this device'}</Text>
+            <Text style={styles.verifiedText}>{liveClockEnabled ? `Punches and breaks sync to ${locationName}` : 'Demo mode · stored on this device'}</Text>
           </View>
         </Card>
         <Card style={styles.history}>
@@ -84,7 +86,7 @@ export function ClockScreen() {
           ) : clockEntries.slice().reverse().slice(0, 5).map((entry) => (
             <View key={entry.id} style={styles.entry}>
               <View style={styles.entryIcon}><Ionicons name={entry.clockOut ? 'checkmark' : 'play'} size={14} color={colors.forest} /></View>
-              <View style={styles.entryCopy}><Text style={styles.entryDay}>{new Date(entry.clockIn).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone })}</Text><Text style={styles.entryTime}>{new Date(entry.clockIn).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone })} – {entry.clockOut ? new Date(entry.clockOut).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone }) : 'Now'}</Text></View>
+              <View style={styles.entryCopy}><Text style={styles.entryDay}>{new Date(entry.clockIn).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone })}</Text><Text style={styles.entryTime}>{new Date(entry.clockIn).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone })} – {entry.clockOut ? new Date(entry.clockOut).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone }) : 'Now'}{entry.breakMinutes > 0 ? ` · ${entry.breakMinutes}m break` : ''}</Text></View>
               <StatusPill label={entry.clockOut ? 'Complete' : 'Open'} tone={entry.clockOut ? 'gray' : 'green'} />
             </View>
           ))}

@@ -6,12 +6,12 @@ This is the permanent project checkpoint. Read it before development work and up
 
 ## Current overall progress
 
-Approximately **86% complete**.
+Approximately **91% complete**.
 
-- Design and interactive MVP: **98%**
+- Design and interactive MVP: **99%**
 - Database foundation: **100%**
-- Live backend connection: **98%**
-- Advanced restaurant features: **34%**
+- Live backend connection: **100%**
+- Advanced restaurant features: **58%**
 - Store publication: **25%**
 
 ## Completed and verified
@@ -132,6 +132,23 @@ Approximately **86% complete**.
 - React quality review passed for the invitation provider, link listener cleanup, async action states, accessible alerts/buttons, and manager invitation controls
 - Supabase Security and Performance Advisors were rerun after the invitation migration; the only new security warning is the intentional, narrow authenticated invitation-acceptance RPC
 - Secure invitation commit `4d143de` was pushed to GitHub `main`; the linked Vercel production site returned HTTP 200 for both HTML and JavaScript, and the public bundle contains the new `Send secure invite` and `Activate account` interfaces
+- Employee time-off submissions now load from and write to `staff_requests` in Supabase; manager request lists and pending badges are derived from live RLS-scoped rows instead of demo data
+- The audited `submit_time_off_request` RPC validates restaurant membership, active employment, ISO date ranges, a 32-day maximum, note length, and exact duplicate pending requests before inserting
+- The audited `review_staff_request` RPC accepts only `approved` or `declined`, locks the target row, verifies owner/manager authority in the same restaurant, and records reviewer identity and review time
+- Direct authenticated INSERT and UPDATE privileges and the stale broad write policy were removed from `staff_requests`; request writes now use only the two narrow RPCs while the existing own-or-manager SELECT policy remains active
+- Hosted rollback verification passed for employee submission, manager approval, reviewer attribution, two audit events, direct-table-write denial, employee-review denial, and duplicate-request denial; zero test request rows persisted
+- The hosted request functions are verified as `SECURITY DEFINER` with an empty `search_path`; the duplicate partial index and sole read policy are present, and generated RPC types match the live database
+- Request UI now provides separate start/end dates, validation, action loading locks, accessible errors, retry behavior, cancelled-state rendering, and live employee identity lookup while preserving demo-mode behavior
+- Post-request-workflow TypeScript validation and production web export both pass
+- Live break state now loads from `break_entries`, survives refreshes, updates the employee on-shift state, and contributes recorded break minutes to punch history
+- Authenticated employees can start and end breaks through narrow `start_break` and `end_break` RPCs; both require an active employee with an open time entry, use server timestamps, and emit audit events
+- A partial unique index guarantees one open break per time entry, providing database-level duplicate protection even if two devices submit simultaneously
+- `clock_out` now closes an in-progress break at the exact clock-out timestamp and records an `ended_on_clock_out` audit event so closed shifts cannot retain impossible open breaks
+- Anonymous break RPC execution is revoked; authenticated access, empty `search_path`, security-definer configuration, and zero persisted test rows were verified in the hosted catalog
+- Hosted rollback tests passed for normal break start/end, two audit events, duplicate-start rejection, no-open-shift rejection, and automatic break closure on clock-out with matching timestamps
+- The first break migration attempt failed atomically because PostgreSQL does not allow a composite row variable in a multiple-item `INTO` list; the lookup was split safely, the corrected migration applied, and no partial schema changes remained
+- Live and demo time-clock interfaces now share start/end-break controls with action locks, accessible errors, synchronized status, and recorded break minutes; the dashboard also blocks clock actions while a break change is in flight
+- Supabase Security and Performance Advisors, TypeScript validation, and the production web export were rerun after the break workflow; no unintended new advisor findings or code/build failures were introduced
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -139,7 +156,8 @@ Approximately **86% complete**.
 
 - End-to-end owner onboarding and owner-specific RLS behavior
 - Owner sign-up, email confirmation, and bootstrap using a real user account
-- Live request reads from the app
+- Production-browser request submission and manager review using the real test employee and manager accounts
+- Production-browser live break start/end and refresh persistence using the real employee test account
 - Live workspace identity and role loading for an owner account
 - Employee creation, editing, location assignment, pay updates, and activation/deactivation using a real owner or manager account
 - Invitation email delivery, browser/mobile redirect, password setup, and final employee activation with a real newly invited account
@@ -150,23 +168,22 @@ Approximately **86% complete**.
 - Docker Desktop's Linux engine returned an internal API error. Local Supabase still cannot start, although both migrations are now applied and verified in the dedicated cloud project.
 - The pre-existing cloud project named `kushalsrirangam's Project` remains untouched.
 - The free Supabase project automatically became `INACTIVE` after low activity, causing database timeouts and a failed production login until it was manually restored. It is healthy again, but an always-on paid plan or an explicit development wake-up/health-check process is required for reliable unattended availability.
-- Supabase Security Advisor reports four intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap, clock, and employee-invitation acceptance RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
+- Supabase Security Advisor reports eight intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap, clock, break, employee-invitation acceptance, request-submission, and request-review RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
 - Supabase leaked-password protection is still disabled and should be enabled before launch. See the [password-security guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Performance Advisor reports only unused-index informational notices. This is expected before realistic traffic; index usage must be reassessed after production-like usage. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
-- Breaks and requests remain demo/local because the database does not yet expose a break write RPC and request actions are not yet connected.
-- Signed-in manager and employee navigation still shows the demo pending-request count of `2` because requests are not yet loaded from Supabase.
 - Employee roster add/edit/deactivate is wired to the live database but still requires a real authenticated owner or manager test.
 - Hosted Supabase Auth still needs its Site URL set to `https://tabletime-3qn4.vercel.app` and its redirect allowlist updated with `https://tabletime-3qn4.vercel.app/**` and `tabletime://invite`. The exact settings are committed in `supabase/config.toml`, but `supabase config push` failed because the local CLI has no Supabase access token, and the available dashboard browser session was signed out. Invitation email delivery and redirect acceptance cannot be verified until this one hosted setting is applied after Supabase sign-in.
 - npm reports 10 moderate and 4 high issues in transitive Expo/Metro build tooling. A normal non-breaking `npm audit fix` was attempted but could not resolve the remaining advisories; the forced fix would perform an unsafe Expo downgrade, so it was not applied. The high findings are in Metro's build-time image parser, not the TableTime runtime or uploaded user content.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
+- The post-request-workflow `expo-doctor@latest` retry did not return diagnostic output in the managed terminal and left its npm process running; the last completed Expo Doctor result remains 18/18 and no dependencies changed in this milestone. Retry after resolving the local Node/npm tool process issue.
 
 ## Next work in order
 
-1. Sign in to Supabase once, push or enter the committed Auth Site URL/redirect allowlist, then verify one complete invitation email and password-acceptance flow.
-2. Connect requests and manager approvals to the live database, replacing the remaining demo request count.
-3. Add secure break start/end RPCs and synchronize live break state.
-4. Test employee add/edit/location/pay/status workflows through the manager UI, then test real owner onboarding.
-5. Add Realtime updates plus resilient offline/retry handling and a clear health/recovery path for an inactive development database.
+1. Commit, push, and verify the request/break release on the linked Vercel production project.
+2. Sign in to Supabase once, push or enter the committed Auth Site URL/redirect allowlist, then verify one complete invitation email and password-acceptance flow.
+3. Test production-browser request submission/review, live breaks, employee add/edit/location/pay/status, and real owner onboarding.
+4. Add Realtime updates plus resilient offline/retry handling and a clear health/recovery path for an inactive development database.
+5. Resolve the local Node/npm diagnostic process issue, upgrade Node to a supported release, and reassess the remaining build-time npm advisories.
 6. Decide between free-tier wake-up handling and an always-on Supabase plan before production launch.
 7. Prepare native Android and iOS release builds, store assets, privacy disclosures, and store submissions after the live workflows are verified.
 

@@ -15,7 +15,7 @@ function formatElapsed(startedAt: string, now: number) {
 export function HomeScreen({ onNavigate }: { onNavigate: (tab: TabKey) => void }) {
   const { width } = useWindowDimensions();
   const compact = width < 720;
-  const { role, activeEntry, onBreak, clockIn, clockOut, clockActionLoading, clockActionError, requests, shifts, employees } = useApp();
+  const { role, activeEntry, onBreak, clockIn, clockOut, clockActionLoading, clockActionError, breakActionLoading, breakActionError, requests, shifts, employees } = useApp();
   const { workspace } = useAuth();
   const [now, setNow] = useState(Date.now());
   const firstName = workspace?.fullName.split(/\s+/)[0] ?? 'Jordan';
@@ -66,7 +66,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (tab: TabKey) => void }
               ))}
             </Card>
             <View style={styles.columnNarrow}>
-              <ClockCard activeEntry={activeEntry?.clockIn} onBreak={onBreak} onClockIn={clockIn} onClockOut={clockOut} onOpen={() => onNavigate('clock')} now={now} timeZone={timeZone} busy={clockActionLoading} error={clockActionError} />
+              <ClockCard activeEntry={activeEntry?.clockIn} onBreak={onBreak} onClockIn={clockIn} onClockOut={clockOut} onOpen={() => onNavigate('clock')} now={now} timeZone={timeZone} busy={clockActionLoading || breakActionLoading} error={breakActionError ?? clockActionError} />
               <Card>
                 <SectionHeader title="Coverage" />
                 <View style={styles.coverageRow}><Text style={styles.coverageTime}>5–7 PM</Text><View style={styles.coverageTrack}><View style={[styles.coverageFill, { width: '86%' }]} /></View><Text style={styles.coverageValue}>6/7</Text></View>
@@ -78,7 +78,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (tab: TabKey) => void }
         </>
       ) : (
         <View style={[styles.columns, compact && styles.stack]}>
-          <ClockCard activeEntry={activeEntry?.clockIn} onBreak={onBreak} onClockIn={clockIn} onClockOut={clockOut} onOpen={() => onNavigate('clock')} now={now} timeZone={timeZone} busy={clockActionLoading} error={clockActionError} large />
+          <ClockCard activeEntry={activeEntry?.clockIn} onBreak={onBreak} onClockIn={clockIn} onClockOut={clockOut} onOpen={() => onNavigate('clock')} now={now} timeZone={timeZone} busy={clockActionLoading || breakActionLoading} error={breakActionError ?? clockActionError} large />
           <Card style={styles.columnWide}>
             <SectionHeader title="Your next shifts" action="Full schedule" onPress={() => onNavigate('schedule')} />
             {shifts.filter((shift) => shift.employeeId === currentEmployeeId).map((shift) => (

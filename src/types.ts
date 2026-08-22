@@ -43,7 +43,7 @@ export type StaffRequest = {
   type: 'Time off' | 'Shift swap' | 'Missed punch';
   detail: string;
   createdAt: string;
-  status: 'pending' | 'approved' | 'declined';
+  status: 'pending' | 'approved' | 'declined' | 'cancelled';
 };
 
 export type ClockEntry = {
@@ -55,7 +55,7 @@ export type ClockEntry = {
 };
 
 export type NewShiftInput = Pick<Shift, 'employeeId' | 'day' | 'date' | 'start' | 'end' | 'role' | 'startsAt' | 'endsAt'>;
-export type NewTimeOffInput = { date: string; reason: string };
+export type NewTimeOffInput = { startsOn: string; endsOn: string; reason: string };
 export type SaveEmployeeInput = {
   id?: string;
   name: string;

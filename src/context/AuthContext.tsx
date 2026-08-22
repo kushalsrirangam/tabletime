@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import * as Linking from 'expo-linking';
 import React, { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { isBackendConfigured, supabase } from '../lib/supabase';
 
@@ -27,13 +28,39 @@ type AuthContextValue = {
   workspaceError?: string;
   hasMembership: boolean;
   workspace: Workspace | null;
+  invitationLoading: boolean;
+  invitationPending: boolean;
+  invitationError?: string;
   signIn: (email: string, password: string) => Promise<string | undefined>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string; emailConfirmationRequired?: boolean }>;
   signOut: () => Promise<void>;
+  completeInvitation: (password: string) => Promise<string | undefined>;
+  cancelInvitation: () => Promise<void>;
   refreshMembership: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function readInvitationTokens(url: string) {
+  const hashIndex = url.indexOf('#');
+  const queryIndex = url.indexOf('?');
+  const queryEnd = hashIndex >= 0 ? hashIndex : url.length;
+  const query = queryIndex >= 0 ? url.slice(queryIndex + 1, queryEnd) : '';
+  const hash = hashIndex >= 0 ? url.slice(hashIndex + 1) : '';
+  const queryParams = new URLSearchParams(query);
+  const hashParams = new URLSearchParams(hash);
+  const value = (key: string) => hashParams.get(key) ?? queryParams.get(key);
+  return {
+    type: value('type'),
+    accessToken: value('access_token'),
+    refreshToken: value('refresh_token'),
+  };
+}
+
+function clearInvitationUrl() {
+  if (typeof window === 'undefined') return;
+  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+}
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(isBackendConfigured);
@@ -42,21 +69,66 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [workspaceError, setWorkspaceError] = useState<string>();
   const [hasMembership, setHasMembership] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [invitationLoading, setInvitationLoading] = useState(false);
+  const [invitationPending, setInvitationPending] = useState(false);
+  const [invitationError, setInvitationError] = useState<string>();
+
+  const handleInvitationUrl = useCallback(async (url: string) => {
+    const tokens = readInvitationTokens(url);
+    if (tokens.type !== 'invite') return false;
+
+    setInvitationPending(true);
+    setInvitationLoading(true);
+    setInvitationError(undefined);
+    if (!supabase || !tokens.accessToken || !tokens.refreshToken) {
+      setInvitationError('This invitation link is incomplete or expired. Ask your manager to send a new invitation.');
+      setInvitationLoading(false);
+      return true;
+    }
+
+    const { error } = await supabase.auth.setSession({
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
+    });
+    if (error) setInvitationError(`This invitation could not be opened. ${error.message}`);
+    setInvitationLoading(false);
+    return true;
+  }, []);
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => {
-      setWorkspaceLoading(Boolean(data.session));
-      setSession(data.session);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    const client = supabase;
+    let active = true;
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const initialize = async () => {
+      try {
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl) await handleInvitationUrl(initialUrl);
+        const { data } = await client.auth.getSession();
+        if (!active) return;
+        setWorkspaceLoading(Boolean(data.session));
+        setSession(data.session);
+      } catch {
+        if (active) setSession(null);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void initialize();
+
+    const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
       setWorkspaceLoading(Boolean(nextSession));
       setSession(nextSession);
     });
-    return () => data.subscription.unsubscribe();
-  }, []);
+    const linkSubscription = Linking.addEventListener('url', ({ url }) => {
+      void handleInvitationUrl(url);
+    });
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+      linkSubscription.remove();
+    };
+  }, [handleInvitationUrl]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     if (!supabase) return 'Backend credentials are not configured.';
@@ -76,6 +148,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut();
+    setInvitationPending(false);
+    setInvitationLoading(false);
+    setInvitationError(undefined);
+    clearInvitationUrl();
   }, []);
 
   const refreshMembership = useCallback(async () => {
@@ -170,6 +246,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
     void refreshMembership();
   }, [refreshMembership]);
 
+  const completeInvitation = useCallback(async (password: string) => {
+    if (!supabase || !session) return 'The invitation session is missing. Ask your manager to send a new invitation.';
+    const { error: passwordError } = await supabase.auth.updateUser({ password });
+    if (passwordError) return passwordError.message;
+
+    const { error: acceptError } = await supabase.rpc('accept_employee_invitation');
+    if (acceptError) return `Your password was saved, but the employee account could not be activated. ${acceptError.message}`;
+
+    setInvitationPending(false);
+    setInvitationError(undefined);
+    clearInvitationUrl();
+    await refreshMembership();
+    return undefined;
+  }, [refreshMembership, session]);
+
+  const cancelInvitation = useCallback(async () => {
+    await signOut();
+  }, [signOut]);
+
   const value = useMemo(() => ({
     backendConfigured: isBackendConfigured,
     loading,
@@ -178,11 +273,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     workspaceError,
     hasMembership,
     workspace,
+    invitationLoading,
+    invitationPending,
+    invitationError,
     signIn,
     signUp,
     signOut,
+    completeInvitation,
+    cancelInvitation,
     refreshMembership,
-  }), [hasMembership, loading, refreshMembership, session, signIn, signOut, signUp, workspace, workspaceError, workspaceLoading]);
+  }), [cancelInvitation, completeInvitation, hasMembership, invitationError, invitationLoading, invitationPending, loading, refreshMembership, session, signIn, signOut, signUp, workspace, workspaceError, workspaceLoading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

@@ -6,12 +6,12 @@ This is the permanent project checkpoint. Read it before development work and up
 
 ## Current overall progress
 
-Approximately **84% complete**.
+Approximately **86% complete**.
 
-- Design and interactive MVP: **97%**
-- Database foundation: **99%**
-- Live backend connection: **97%**
-- Advanced restaurant features: **27%**
+- Design and interactive MVP: **98%**
+- Database foundation: **100%**
+- Live backend connection: **98%**
+- Advanced restaurant features: **34%**
 - Store publication: **25%**
 
 ## Completed and verified
@@ -118,6 +118,19 @@ Approximately **84% complete**.
 - Employee RLS verification confirmed the authenticated employee could read the completed personal punch while it remained isolated through the existing time-entry policy
 - A full production-page reload preserved the signed-in session, off-shift state, and completed `1:30 PM – 1:31 PM` personal punch history with no browser console errors or warnings
 - The production browser is left signed in as Taylor Employee on the verified Time clock screen
+- Secure employee invitations are now initiated from the live employee editor only after an employee record and work email have been saved
+- The `invite-employee` Supabase Edge Function is deployed as active version 2 with JWT verification enabled, strict manager/owner membership checks, employee/email validation, a production/local origin allowlist, and no service-role credential in the client
+- A direct public request to the deployed invitation endpoint returned HTTP 401, confirming the platform JWT guard blocks unauthenticated callers before invitation logic runs
+- Auth-account creation and employee linking now finish through the atomic `finalize_employee_invitation` database function; only the `service_role` can execute it, while `anon` and `authenticated` execution are both revoked and verified
+- Invitation linking creates the employee membership, marks the roster record as invited, and records an audit event in one transaction; failed finalization triggers deletion of the newly created Auth user
+- Invited employees now receive a dedicated password-completion screen that handles Supabase invite tokens on web and native deep links, updates the password, activates only the employee row connected to `auth.uid()`, and clears tokens from the browser URL
+- The idempotent `accept_employee_invitation` RPC is restricted to authenticated users, rejects missing/inactive/unlinked employees, and passed a real authenticated rollback test against the active test employee
+- Expo Linking `~57.0.7` was added, the existing `tabletime` native URL scheme was retained, and Expo was aligned to SDK 57 patch `~57.0.15`
+- Cloud migration `add_employee_invitations` applied successfully; generated database types match both new RPCs and cloud migration history includes the new migration
+- TypeScript validation and the production web export pass after the invitation workflow changes
+- Expo Doctor initially identified the older Expo patch and duplicate `expo-constants`; after the SDK 57 patch alignment, all 18/18 checks pass
+- React quality review passed for the invitation provider, link listener cleanup, async action states, accessible alerts/buttons, and manager invitation controls
+- Supabase Security and Performance Advisors were rerun after the invitation migration; the only new security warning is the intentional, narrow authenticated invitation-acceptance RPC
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -128,6 +141,7 @@ Approximately **84% complete**.
 - Live request reads from the app
 - Live workspace identity and role loading for an owner account
 - Employee creation, editing, location assignment, pay updates, and activation/deactivation using a real owner or manager account
+- Invitation email delivery, browser/mobile redirect, password setup, and final employee activation with a real newly invited account
 
 ## Failures and blockers
 
@@ -135,19 +149,19 @@ Approximately **84% complete**.
 - Docker Desktop's Linux engine returned an internal API error. Local Supabase still cannot start, although both migrations are now applied and verified in the dedicated cloud project.
 - The pre-existing cloud project named `kushalsrirangam's Project` remains untouched.
 - The free Supabase project automatically became `INACTIVE` after low activity, causing database timeouts and a failed production login until it was manually restored. It is healthy again, but an always-on paid plan or an explicit development wake-up/health-check process is required for reliable unattended availability.
-- Supabase Security Advisor reports three intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap and clock RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
+- Supabase Security Advisor reports four intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap, clock, and employee-invitation acceptance RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
 - Supabase leaked-password protection is still disabled and should be enabled before launch. See the [password-security guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Performance Advisor reports only unused-index informational notices. This is expected before realistic traffic; index usage must be reassessed after production-like usage. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
 - Breaks and requests remain demo/local because the database does not yet expose a break write RPC and request actions are not yet connected.
 - Signed-in manager and employee navigation still shows the demo pending-request count of `2` because requests are not yet loaded from Supabase.
 - Employee roster add/edit/deactivate is wired to the live database but still requires a real authenticated owner or manager test.
-- Creating an employee roster record does not yet create an Auth account or send an invitation email. Secure invitations require a protected server-side Auth workflow; no service-role key is exposed in the app.
-- npm reports 10 moderate issues in transitive Expo build tooling. The suggested forced fix would perform an unsafe Expo downgrade, so it was not applied.
+- Hosted Supabase Auth still needs its Site URL set to `https://tabletime-3qn4.vercel.app` and its redirect allowlist updated with `https://tabletime-3qn4.vercel.app/**` and `tabletime://invite`. The exact settings are committed in `supabase/config.toml`, but `supabase config push` failed because the local CLI has no Supabase access token, and the available dashboard browser session was signed out. Invitation email delivery and redirect acceptance cannot be verified until this one hosted setting is applied after Supabase sign-in.
+- npm reports 10 moderate and 4 high issues in transitive Expo/Metro build tooling. A normal non-breaking `npm audit fix` was attempted but could not resolve the remaining advisories; the forced fix would perform an unsafe Expo downgrade, so it was not applied. The high findings are in Metro's build-time image parser, not the TableTime runtime or uploaded user content.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
 
 ## Next work in order
 
-1. Add secure employee invitation emails and Auth-account linking through protected server-side code.
+1. Sign in to Supabase once, push or enter the committed Auth Site URL/redirect allowlist, then verify one complete invitation email and password-acceptance flow.
 2. Connect requests and manager approvals to the live database, replacing the remaining demo request count.
 3. Add secure break start/end RPCs and synchronize live break state.
 4. Test employee add/edit/location/pay/status workflows through the manager UI, then test real owner onboarding.

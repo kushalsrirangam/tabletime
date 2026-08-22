@@ -28,7 +28,7 @@ function statusPresentation(employee: Employee): { label: string; tone: 'green' 
 export function TeamScreen() {
   const { width } = useWindowDimensions();
   const compact = width < 720;
-  const { employees, locations, dataLoading, dataError, refreshLiveData, saveEmployee } = useApp();
+  const { employees, locations, dataLoading, dataError, liveClockEnabled, refreshLiveData, saveEmployee, inviteEmployee } = useApp();
   const { workspace } = useAuth();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<TeamFilter>('all');
@@ -43,6 +43,8 @@ export function TeamScreen() {
   const [employmentStatus, setEmploymentStatus] = useState<EmploymentStatus>('active');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string>();
+  const [invitationSubmitting, setInvitationSubmitting] = useState(false);
+  const [pageNotice, setPageNotice] = useState<string>();
 
   const activeCount = employees.filter((employee) => employee.employmentStatus === 'active').length;
   const normalizedQuery = query.trim().toLowerCase();
@@ -62,11 +64,12 @@ export function TeamScreen() {
     setPrimaryLocationId(employee?.primaryLocationId ?? locations[0]?.id ?? '');
     setEmploymentStatus(employee?.employmentStatus ?? 'active');
     setFormError(undefined);
+    setInvitationSubmitting(false);
     setModalOpen(true);
   };
 
   const closeForm = () => {
-    if (!submitting) setModalOpen(false);
+    if (!submitting && !invitationSubmitting) setModalOpen(false);
   };
 
   const normalizedEmail = email.trim();
@@ -100,6 +103,30 @@ export function TeamScreen() {
     }
   };
 
+  const sendInvitation = async () => {
+    if (!editingEmployee || invitationSubmitting) return;
+    const savedEmail = editingEmployee.email?.trim().toLowerCase();
+    if (!savedEmail) {
+      setFormError('Add and save a work email before sending an invitation.');
+      return;
+    }
+    if (savedEmail !== normalizedEmail.toLowerCase()) {
+      setFormError('Save the changed work email before sending the invitation.');
+      return;
+    }
+    setInvitationSubmitting(true);
+    setFormError(undefined);
+    try {
+      const message = await inviteEmployee(editingEmployee.id);
+      setPageNotice(message);
+      setModalOpen(false);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'The invitation could not be sent.');
+    } finally {
+      setInvitationSubmitting(false);
+    }
+  };
+
   return (
     <View>
       <PageTitle
@@ -108,6 +135,7 @@ export function TeamScreen() {
         subtitle="Add staff, update workforce details, and manage employment status."
         action={!compact ? <Button label="Add employee" icon="person-add-outline" onPress={() => resetForm()} /> : undefined}
       />
+      {pageNotice ? <View accessibilityRole="alert" style={styles.pageNotice}><Ionicons name="mail-open-outline" size={18} color={colors.forest} /><Text style={styles.pageNoticeText}>{pageNotice}</Text><Pressable accessibilityRole="button" accessibilityLabel="Dismiss invitation notice" onPress={() => setPageNotice(undefined)}><Ionicons name="close" size={18} color={colors.forest} /></Pressable></View> : null}
       <Card style={styles.tableCard}>
         <View style={[styles.tools, compact && styles.toolsCompact]}>
           <View style={styles.search}><Ionicons name="search" size={17} color={colors.muted} /><TextInput accessibilityLabel="Search team" placeholder="Search name, email, role, or location" placeholderTextColor={colors.muted} value={query} onChangeText={setQuery} style={styles.input} /></View>
@@ -141,7 +169,7 @@ export function TeamScreen() {
         title={editingEmployee ? `Edit ${editingEmployee.name}` : 'Add employee'}
         subtitle={editingEmployee ? 'Update roster details, primary location, pay, or employment status.' : 'Create a staff record for scheduling and time tracking. App login invitations are handled separately.'}
         submitLabel={editingEmployee ? 'Save changes' : 'Add employee'}
-        canSubmit={canSubmit}
+        canSubmit={canSubmit && !invitationSubmitting}
         submitting={submitting}
         onClose={closeForm}
         onSubmit={() => { void submitEmployee(); }}
@@ -156,7 +184,8 @@ export function TeamScreen() {
         <ChoiceField label="Primary location" value={primaryLocationId} onChange={setPrimaryLocationId} options={[{ label: 'Unassigned', value: '' }, ...locations.map((location) => ({ label: location.name, value: location.id }))]} />
         <ChoiceField label="Employment status" value={employmentStatus} onChange={(value) => setEmploymentStatus(value === 'inactive' || value === 'invited' ? value : 'active')} options={editingSelf ? [{ label: 'Active', value: 'active' }] : [...(editingEmployee?.employmentStatus === 'invited' ? [{ label: 'Invited', value: 'invited' }] : []), { label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }]} />
         {editingSelf ? <Text style={styles.formNote}>Your connected employee profile must remain active. Another manager can manage it if needed.</Text> : null}
-        <View style={styles.accountNote}><Ionicons name={editingEmployee?.userId ? 'shield-checkmark-outline' : 'mail-unread-outline'} size={18} color={colors.forest} /><Text style={styles.accountNoteText}>{editingEmployee?.userId ? 'An app account is connected. Changing the work email here does not change their sign-in email.' : 'No app login is connected yet. The employee can be scheduled now; secure invitations are a separate task.'}</Text></View>
+        <View style={styles.accountNote}><Ionicons name={editingEmployee?.userId ? 'shield-checkmark-outline' : 'mail-unread-outline'} size={18} color={colors.forest} /><Text style={styles.accountNoteText}>{editingEmployee?.userId ? 'An app account is connected. Changing the work email here does not change their sign-in email.' : editingEmployee ? 'No app login is connected yet. Send a secure invitation after the saved work email is correct.' : 'Save this employee first, then reopen their details to send a secure app invitation.'}</Text></View>
+        {editingEmployee && !editingEmployee.userId ? <Button label="Send secure invite" icon="mail-outline" variant="secondary" loading={invitationSubmitting} disabled={!liveClockEnabled || !editingEmployee.email || editingEmployee.email.trim().toLowerCase() !== normalizedEmail.toLowerCase() || submitting} onPress={() => { void sendInvitation(); }} /> : null}
         {formError ? <Text accessibilityRole="alert" style={styles.formErrorBox}>{formError}</Text> : null}
       </FormModal>
     </View>
@@ -174,4 +203,5 @@ const styles = StyleSheet.create({
   empty: { padding: 40, alignItems: 'center' }, message: { padding: 40, alignItems: 'center', gap: 8 }, errorTitle: { color: colors.red, fontWeight: '800' }, emptyTitle: { color: colors.ink, fontWeight: '800' }, emptyCopy: { color: colors.muted, fontSize: 12, marginTop: 5, textAlign: 'center' }, mobileAction: { marginTop: 14 },
   formError: { color: colors.red, fontSize: 11, fontWeight: '700', marginTop: -10 }, formNote: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: -9 }, formErrorBox: { color: colors.red, backgroundColor: colors.redSoft, borderRadius: 9, padding: 11, fontSize: 11, lineHeight: 16 },
   accountNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, padding: 12, backgroundColor: colors.mint, borderRadius: 10 }, accountNoteText: { flex: 1, color: colors.forestDark, fontSize: 11, lineHeight: 16 },
+  pageNotice: { marginBottom: 14, padding: 12, borderRadius: 10, backgroundColor: colors.mint, flexDirection: 'row', alignItems: 'center', gap: 9 }, pageNoticeText: { flex: 1, color: colors.forestDark, fontSize: 12, fontWeight: '700' },
 });

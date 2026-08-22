@@ -34,6 +34,7 @@ type AppContextValue = StoredState & {
   addTimeOffRequest: (input: NewTimeOffInput) => void;
   addShift: (input: NewShiftInput) => Promise<string | undefined>;
   saveEmployee: (input: SaveEmployeeInput) => Promise<void>;
+  inviteEmployee: (employeeId: string) => Promise<string>;
   publishSchedule: () => Promise<void>;
   refreshLiveData: () => Promise<void>;
 };
@@ -71,6 +72,18 @@ function employeeErrorMessage(message: string) {
   if (normalized.includes('0 rows') || normalized.includes('json object requested')) return 'This employee could not be updated. You cannot deactivate your own connected profile.';
   if (normalized.includes('check constraint')) return 'One or more employee details are not valid. Review the form and try again.';
   return `Employee details could not be saved. ${message}`;
+}
+
+async function invitationErrorMessage(error: unknown) {
+  const fallback = error instanceof Error ? error.message : 'The invitation could not be sent.';
+  const context = (error as { context?: Response } | null)?.context;
+  if (!context) return fallback;
+  try {
+    const payload = await context.clone().json() as { message?: string };
+    return payload.message ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function normalizedEmploymentStatus(value: string): EmploymentStatus {
@@ -396,6 +409,20 @@ export function AppProvider({ children }: PropsWithChildren) {
     await refreshLiveData();
   }, [backendConfigured, employees, locations, refreshLiveData, session, workspace]);
 
+  const inviteEmployee = useCallback(async (employeeId: string) => {
+    if (!backendConfigured || !supabase || !session || !workspace) {
+      throw new Error('Sign in to the live restaurant workspace before sending invitations.');
+    }
+    if (workspace.role === 'employee') throw new Error('Only an owner or manager can invite employees.');
+
+    const { data, error } = await supabase.functions.invoke('invite-employee', {
+      body: { employeeId },
+    });
+    if (error) throw new Error(await invitationErrorMessage(error));
+    await refreshLiveData();
+    return (data as { message?: string } | null)?.message ?? 'Invitation sent.';
+  }, [backendConfigured, refreshLiveData, session, workspace]);
+
   const publishSchedule = useCallback(async () => {
     if (backendConfigured) {
       if (!supabase || !workspace) return;
@@ -412,8 +439,8 @@ export function AppProvider({ children }: PropsWithChildren) {
 
   const value = useMemo(() => ({
     hydrated, dataLoading, dataError, liveClockEnabled: backendConfigured, clockActionLoading, clockActionError, employees, locations, role, setRole: setDemoRole, clockEntries, activeEntry, onBreak, requests, shifts,
-    clockIn, clockOut, toggleBreak, resolveRequest, addTimeOffRequest, addShift, saveEmployee, publishSchedule, refreshLiveData,
-  }), [activeEntry, addShift, addTimeOffRequest, backendConfigured, clockActionError, clockActionLoading, clockEntries, clockIn, clockOut, dataError, dataLoading, employees, hydrated, locations, onBreak, publishSchedule, refreshLiveData, requests, resolveRequest, role, saveEmployee, shifts, toggleBreak]);
+    clockIn, clockOut, toggleBreak, resolveRequest, addTimeOffRequest, addShift, saveEmployee, inviteEmployee, publishSchedule, refreshLiveData,
+  }), [activeEntry, addShift, addTimeOffRequest, backendConfigured, clockActionError, clockActionLoading, clockEntries, clockIn, clockOut, dataError, dataLoading, employees, hydrated, inviteEmployee, locations, onBreak, publishSchedule, refreshLiveData, requests, resolveRequest, role, saveEmployee, shifts, toggleBreak]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

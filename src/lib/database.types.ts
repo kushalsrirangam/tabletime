@@ -491,6 +491,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_employee_invitation: { Args: never; Returns: string }
       bootstrap_owner: {
         Args: {
           location_address?: string
@@ -515,6 +516,18 @@ export type Database = {
         Returns: string
       }
       clock_out: { Args: never; Returns: string }
+      finalize_employee_invitation: {
+        Args: {
+          p_actor_user_id: string
+          p_invited_user_id: string
+          p_target_employee_id: string
+        }
+        Returns: {
+          employee_id: string
+          invited_email: string
+          organization_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
@@ -647,4 +660,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

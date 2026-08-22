@@ -10,6 +10,7 @@ import { RequestsScreen } from './src/screens/RequestsScreen';
 import { ScheduleScreen } from './src/screens/ScheduleScreen';
 import { TeamScreen } from './src/screens/TeamScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
+import { InvitationSetupScreen } from './src/screens/InvitationSetupScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { colors } from './src/theme';
 import { TabKey } from './src/types';
@@ -41,8 +42,9 @@ export default function App() {
 }
 
 function AuthGate() {
-  const { backendConfigured, loading, session, workspaceLoading, workspaceError, hasMembership, refreshMembership, signOut } = useAuth();
-  if (loading || (backendConfigured && session && workspaceLoading)) return <View style={styles.loading}><ActivityIndicator size="large" color={colors.forest} /></View>;
+  const { backendConfigured, loading, session, workspaceLoading, workspaceError, hasMembership, invitationLoading, invitationPending, refreshMembership, signOut } = useAuth();
+  if (loading || invitationLoading || (backendConfigured && session && workspaceLoading && !invitationPending)) return <View style={styles.loading}><ActivityIndicator size="large" color={colors.forest} /></View>;
+  if (backendConfigured && invitationPending) return <InvitationSetupScreen />;
   if (backendConfigured && !session) return <LoginScreen />;
   if (backendConfigured && session && workspaceError) return <View style={styles.loading}><Text style={styles.errorTitle}>We couldn’t load your restaurant</Text><Text style={styles.errorCopy}>{workspaceError}</Text><View style={styles.errorActions}><Pressable onPress={refreshMembership} style={styles.retry}><Text style={styles.retryText}>Try again</Text></Pressable><Pressable onPress={signOut} style={styles.signOut}><Text style={styles.signOutText}>Sign out</Text></Pressable></View></View>;
   if (backendConfigured && session && !hasMembership) return <OnboardingScreen />;

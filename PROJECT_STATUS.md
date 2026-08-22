@@ -12,7 +12,7 @@ Approximately **98% complete**.
 - Database foundation: **100%**
 - Live backend connection: **100%**
 - Advanced restaurant features: **90%**
-- Store publication: **78%**
+- Store publication: **84%**
 
 ## Completed and verified
 
@@ -216,6 +216,9 @@ Approximately **98% complete**.
 - The first sandboxed release-gate run after the version cleanup was blocked when Expo Doctor could not access the npm cache/network; the approved retry passed strict TypeScript, Expo Doctor 18/18, web export, and the zero-high/critical audit threshold
 - GitHub Actions `Release quality` run `32599392855` passed for checkpoint commit `f6f8885`, and GitHub reports successful Vercel deployment checks for both linked Vercel project records
 - The first non-interactive iOS build preflight stopped before Apple credential resolution because the verified `app.json` cleanup had not yet been committed; no iOS build or credential change occurred, and committing the clean configuration is the required retry step
+- Android production build `727e0ac9-4375-4664-9541-b87448dbe1a6` finished successfully as a Play Store AAB for SDK 57, app version 1.0.0/versionCode 2, package `com.kushalsrirangam.tabletime`, and the EAS-managed production keystore
+- The signed production bundle is available from the [stable Expo build page](https://expo.dev/accounts/kushalkings-team/projects/clockin/builds/727e0ac9-4375-4664-9541-b87448dbe1a6); its download followed the expected redirects and returned HTTP 200 with a 50,734,218-byte AAB
+- Clean iOS production preflight initialized remote buildNumber 1 and reached remote-credential resolution, then stopped before upload/build because no Apple Distribution Certificate/provisioning credentials are configured; no Apple password was requested from the owner or written to the project
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -232,6 +235,7 @@ Approximately **98% complete**.
 - A complete real-user deletion through the Edge Function is intentionally untested because it would permanently remove an existing test identity; use a disposable Auth identity for the final destructive E2E test
 - Branded splash rendering and adaptive-icon masking on physical Android/iOS release builds
 - Android preview APK installation and full smoke testing on a physical Android device; the current free-tier artifact expires September 5, 2026 and can be regenerated from the committed profile
+- Android production AAB upload and closed/internal-track validation in Google Play; the current EAS artifact expires September 21, 2026 and can be regenerated from the committed production profile
 
 ## Failures and blockers
 
@@ -250,13 +254,14 @@ Approximately **98% complete**.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
 - The first sandboxed `expo install expo-splash-screen` attempt failed with network `EACCES`; the approved network retry installed the exact SDK 57-compatible package successfully.
 - “TableTime” is already used by unrelated apps in both stores, so the release display/listing name is now `TableTime Staff`; final trademark/name clearance remains the owner's responsibility.
-- Store publication still needs a real public support email, legal developer/company name and address, Apple/Google developer accounts, store credentials, screenshots, Android production/iOS builds, physical-device testing, and final submissions. These values cannot be invented or committed as secrets.
+- iOS production building is blocked at Apple credential setup: EAS has no Distribution Certificate/provisioning credentials, and non-interactive setup cannot create them. The owner must use a paid Apple Developer account in one interactive EAS credentials/build session; the Apple password and 2FA code must be entered privately and must never be sent in chat or committed.
+- Store publication still needs a real public support email, legal developer/company name and address, Apple/Google developer accounts, store credentials, screenshots, an iOS production build, physical-device testing, and final submissions. These values cannot be invented or committed as secrets.
 
 ## Next work in order
 
 1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
 2. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
-3. Create the Android production bundle and iOS build, install and smoke-test native artifacts on physical devices, and capture store screenshots.
+3. Install and smoke-test the Android preview build on a physical device, upload the finished AAB to a Google Play test track, complete private Apple credential setup, create/test the iOS build, and capture store screenshots.
 4. Add an external production error-monitoring destination and verify its release alerting.
 5. Publish final legal pages with owner-supplied support/legal details, create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
 

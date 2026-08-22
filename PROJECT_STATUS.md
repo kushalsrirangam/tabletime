@@ -6,13 +6,13 @@ This is the permanent project checkpoint. Read it before development work and up
 
 ## Current overall progress
 
-Approximately **95% complete**.
+Approximately **97% complete**.
 
 - Design and interactive MVP: **100%**
 - Database foundation: **100%**
 - Live backend connection: **100%**
-- Advanced restaurant features: **82%**
-- Store publication: **55%**
+- Advanced restaurant features: **88%**
+- Store publication: **65%**
 
 ## Completed and verified
 
@@ -178,6 +178,21 @@ Approximately **95% complete**.
 - Expo Doctor now completes successfully with **21/21 checks passed** after the release dependencies and native configuration changes
 - An isolated Android prebuild completed successfully without modifying the repository; its generated manifest retained only Internet access, applied explicit removal rules for storage/overlay/vibration permissions, disabled app-data backup, and included the `tabletime` invite deep link
 - EAS preview and production builders are pinned to supported Node 22.13.0, avoiding the local Node 24.0.2 engine mismatch in release infrastructure
+- Release commit `5b3527c` (`Prepare native release and account controls`) is pushed to GitHub `main`, and the linked Vercel project deployed the commit successfully
+- Production serves the release bundle `index-0a921e894f56ebfb3b25a0c1a7fa6377.js`; direct `/privacy`, `/terms`, and `/delete-account` requests resolve through the SPA fallback over HTTPS
+- Production response headers were verified for the configured Content Security Policy, HSTS, frame denial, MIME-sniffing prevention, referrer policy, and permissions policy
+- Production employee-session verification confirmed the Account screen displays the authenticated employee, restaurant, role, position, and `LIVE` state; the deletion confirmation remained disabled until all safeguards were satisfied and was closed without changing the test account
+- Supabase Security and Performance Advisors were rerun after self-service deletion; no unintended finding was introduced, and the remaining security findings are the documented narrow authenticated RPCs plus disabled leaked-password protection
+- The isolated Android prebuild's temporary directory was removed after verification; Metro briefly logged an `ENOENT` for that watched diagnostic path, then the local diagnostic server was stopped. No source, export, or production deployment was affected
+- EAS CLI authentication status was checked and returned `Not logged in`; official Expo documentation confirms browser-based `eas login` is the default and no password needs to be shared with the project or Codex
+- A top-level production error boundary now preserves a safe recovery path for unexpected render failures, shows a shareable incident ID, avoids exposing internal error details to workers, and logs diagnostic context for future monitoring integration
+- Supported Node 22.13.0 is pinned in `.node-version`, `.nvmrc`, the package engine declaration, and every EAS profile so local, CI, and cloud release environments can converge on the same runtime
+- React Native's duplicate Metro 0.84.4 build tool was aligned to Expo's patched 0.84.5 release; `npm audit` dropped from 4 high plus 11 moderate findings to **0 high/critical plus 11 moderate** Expo/Xcode build-tool findings
+- The remaining moderate dependency advisories have no safe SDK 57 upgrade path: npm proposes a breaking downgrade to Expo 46 / splash screen 55, so the unsafe forced fix remains intentionally rejected
+- A repeatable `npm run release:check` gate now runs strict TypeScript, Expo Doctor, the production web export, and a high/critical dependency audit; the complete gate passed locally
+- GitHub Actions release quality and dependency-review workflows were added with least-privilege read permissions, Node 22.13.0, locked `npm ci`, concurrency cancellation, timeouts, and high-severity enforcement
+- The GitHub README now documents the live application, production architecture, verified product capabilities, security model, release command, public legal URLs, and honest native-store prerequisites
+- An Expo EAS project was created by the owner and its exact project ID supplied; local linking remains pending only until the secure Expo/GitHub browser authorization returns to the waiting CLI
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -206,20 +221,20 @@ Approximately **95% complete**.
 - Performance Advisor reports only unused-index informational notices. This is expected before realistic traffic; index usage must be reassessed after production-like usage. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
 - Employee roster add/edit/deactivate is wired to the live database but still requires a real authenticated owner or manager test.
 - Hosted Supabase Auth still needs its Site URL set to `https://tabletime-3qn4.vercel.app` and its redirect allowlist updated with `https://tabletime-3qn4.vercel.app/**` and `tabletime://invite`. The exact settings are committed in `supabase/config.toml`, but `supabase config push` failed because the local CLI has no Supabase access token, and the available dashboard browser session was signed out. Invitation email delivery and redirect acceptance cannot be verified until this one hosted setting is applied after Supabase sign-in.
-- npm reports 11 moderate and 4 high issues in transitive Expo/Metro build tooling after adding the SDK-compatible splash package. A normal non-breaking `npm audit fix` was attempted but could not resolve the remaining advisories; the forced fix would perform an unsafe Expo downgrade, so it was not applied. The high findings are in Metro's build-time image parser, not the TableTime runtime or uploaded user content.
+- npm reports 11 moderate and **zero high/critical** issues in transitive Expo/Xcode build tooling. The patched Metro 0.84.5 update removed all four high findings. A forced fix would perform an unsafe Expo downgrade, so it was not applied.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
+- EAS CLI is not authenticated. An Expo account must be signed in through the CLI's browser flow before `eas init` or cloud Android/iOS builds can run; no Expo credentials are stored in the repository.
 - The first sandboxed `expo install expo-splash-screen` attempt failed with network `EACCES`; the approved network retry installed the exact SDK 57-compatible package successfully.
 - “TableTime” is already used by unrelated apps in both stores, so the release display/listing name is now `TableTime Staff`; final trademark/name clearance remains the owner's responsibility.
 - Store publication still needs a real public support email, legal developer/company name and address, Expo/Apple/Google developer accounts, store credentials, screenshots, native builds, and final submissions. These values cannot be invented or committed as secrets.
 
 ## Next work in order
 
-1. Commit, push, and verify the branded release, public legal URLs, security headers, Account screen, and deletion UI on Vercel production.
-2. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
-3. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
-4. Resolve the Node/npm diagnostic issue, use a supported Node release, rerun Expo Doctor/advisors/audit, and add production monitoring.
-5. Link an Expo account, create and test Android/iOS builds, capture store screenshots, and publish the legal pages with owner-supplied support/legal details.
-6. Create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
+1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
+2. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
+3. Complete the waiting Expo browser authorization, run `eas init`, verify the GitHub quality workflow, and add an external production error-monitoring destination.
+4. Create and test Android/iOS builds and capture store screenshots.
+5. Publish final legal pages with owner-supplied support/legal details, create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
 
 ## Rule for future updates
 

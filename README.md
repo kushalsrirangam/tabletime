@@ -1,50 +1,54 @@
-# TableTime
+# TableTime Staff
 
-TableTime is a cross-platform restaurant workforce application for employee scheduling, attendance, requests, and daily floor visibility. The same Expo/React Native codebase runs on Android, iOS, and the web.
+TableTime Staff is a cross-platform restaurant workforce app for scheduling, attendance, breaks, requests, and team operations. One Expo SDK 57 codebase runs on Android, iOS, and the web.
 
-## Current MVP
+[Open the production web app](https://tabletime-3qn4.vercel.app) · [Privacy](https://tabletime-3qn4.vercel.app/privacy) · [Account deletion](https://tabletime-3qn4.vercel.app/delete-account)
 
-- Responsive manager and employee experiences
-- Live clock-in, clock-out, and break controls
-- Locally persisted punch history
-- Editable weekly team schedule with draft creation and publishing
-- Employee directory with search and weekly-hour progress
-- Structured time-off submission plus shift-swap and missed-punch approval flows
-- Manager/employee role preview
+## Product capabilities
 
-The application currently uses representative local data and versioned on-device persistence so the complete workflow can be tested before committing to a paid backend. Production authentication, server-authoritative timestamps, push notifications, and payroll integrations belong in the backend phase.
-
-## Backend mode
-
-The project includes a Supabase/PostgreSQL foundation in `supabase/`. It isolates every row by organization with Row Level Security, keeps authorization roles in database memberships, and exposes narrow clock-in/out functions that generate timestamps on the server.
-
-1. Create or choose a dedicated Supabase project.
-2. Copy `.env.example` to `.env.local` and add the project URL and publishable key. Never use a secret or service-role key in the app.
-3. Link the project and apply the migration:
-
-```bash
-npx supabase link --project-ref YOUR_PROJECT_REF
-npx supabase db push
-```
-
-When backend variables are present, TableTime requires a valid Supabase session. Without them, it clearly runs in local demo mode.
-
-## Run locally
-
-```bash
-npm install
-npm run web
-```
-
-For a phone, install Expo Go and run `npm start`, then scan the displayed QR code.
-
-## Verification
-
-```bash
-npm run typecheck
-npm run build:web
-```
+- Secure owner, manager, and employee accounts with database-derived roles
+- Multi-restaurant PostgreSQL isolation through Supabase Row Level Security
+- Server-authoritative clock-in, clock-out, and break tracking
+- Weekly scheduling with drafts, publishing, timezone-aware display, and employee-only visibility
+- Employee add/edit, location, pay-rate, invitation, and activation controls
+- Employee time-off requests with audited manager approval or decline
+- Realtime workspace refresh, retry/backoff recovery, and visible sync health
+- Self-service account deletion with reauthentication and owner safeguards
+- Responsive manager and employee experiences for phone, tablet, and web
 
 ## Production architecture
 
-Use a managed PostgreSQL database with organization-scoped authorization and immutable audit events. Clock endpoints must create timestamps on the server instead of accepting device-generated timestamps. Store timestamps in UTC and retain the restaurant timezone separately for display and labor-rule calculations.
+- **Client:** Expo 57, React Native 0.86, React 19, TypeScript
+- **Backend:** Supabase Auth, PostgreSQL, RLS, RPCs, Edge Functions, and Realtime
+- **Web hosting:** Vercel with HTTPS, CSP, HSTS, SPA legal routes, and Git deployments
+- **Native delivery:** EAS Build profiles for Android APK/AAB and iOS IPA
+- **Security:** tenant-scoped data, server timestamps, narrow privileged functions, audit events, protected deletion, no service-role key in the client
+
+The public Supabase URL and publishable key are client-safe configuration. Secret/service-role keys must never be added to Expo, Vercel client variables, or Git.
+
+## Run locally
+
+Use the supported Node release from `.node-version` or `.nvmrc`:
+
+```bash
+npm ci
+npm run web
+```
+
+Without Supabase environment variables, TableTime clearly runs in local demo mode. With `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, it requires a real Supabase session and loads the authenticated restaurant workspace.
+
+## Release verification
+
+```bash
+npm run release:check
+```
+
+The release gate runs strict TypeScript, Expo Doctor, a production web export, and rejects high/critical dependency findings. GitHub Actions repeats the same checks on every push to `main` and every pull request using Node 22.13.
+
+## Backend and store documentation
+
+- Database migrations and Edge Functions: `supabase/`
+- Store listing, privacy, data-safety, review, and release notes: `docs/store/`
+- Permanent verified progress, failures, and next actions: `PROJECT_STATUS.md`
+
+Native store submission still requires the owner's Expo, Apple Developer, and Google Play accounts plus final legal/support details. Credentials and recovery codes must stay outside the repository.

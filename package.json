@@ -1,6 +1,15 @@
 {
   "name": "tabletime",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=22.13 <23"
+  },
+  "overrides": {
+    "@react-native/community-cli-plugin": {
+      "metro": "0.84.5",
+      "metro-config": "0.84.5"
+    }
+  },
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -26,7 +35,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "build:web": "expo export --platform web"
+    "build:web": "expo export --platform web",
+    "release:check": "npm run typecheck && npx expo-doctor && npm run build:web && npm audit --audit-level=high"
   },
   "private": true
 }

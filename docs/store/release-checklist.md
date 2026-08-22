@@ -10,6 +10,9 @@
 - [x] Production icon and adaptive icon sources added
 - [x] Native splash screen plugin and asset configured
 - [x] Isolated Android prebuild and generated permission manifest verified
+- [x] Supported Node 22.13.0 pinned for local, CI, and EAS build environments
+- [x] Release-quality gate passes TypeScript, Expo Doctor, web export, and high/critical dependency audit
+- [x] High-severity Metro dependency findings resolved with the SDK-compatible 0.84.5 patch
 - [ ] Expo account linked and EAS project ID written by `eas init`
 - [ ] Android preview APK built and tested on a physical device
 - [ ] Android production AAB built successfully
@@ -41,9 +44,9 @@
 - [x] Listing copy drafted
 - [x] Privacy and data-safety answers drafted from current behavior
 - [x] Review instructions drafted
-- [ ] Public privacy-policy URL published
+- [x] Public privacy-policy URL deployed and verified at `https://tabletime-3qn4.vercel.app/privacy`
 - [ ] Public support email and legal developer details supplied
-- [ ] Account-deletion web URL deployed and verified publicly
+- [x] Account-deletion web URL deployed and verified at `https://tabletime-3qn4.vercel.app/delete-account`
 - [ ] Phone and tablet screenshots captured from release build
 - [ ] Google Play developer account and application created
 - [ ] Apple Developer account and App Store Connect application created

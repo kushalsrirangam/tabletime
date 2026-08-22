@@ -14,6 +14,7 @@ import { InvitationSetupScreen } from './src/screens/InvitationSetupScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { AccountScreen } from './src/screens/AccountScreen';
 import { PublicDocumentKind, PublicDocumentScreen } from './src/screens/PublicDocumentScreen';
+import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 import { colors } from './src/theme';
 import { TabKey } from './src/types';
 
@@ -33,16 +34,18 @@ function AppContent() {
 
 export default function App() {
   const publicDocument = getPublicDocument();
-  if (publicDocument) return <PublicDocumentScreen kind={publicDocument} />;
+  if (publicDocument) return <AppErrorBoundary><PublicDocumentScreen kind={publicDocument} /></AppErrorBoundary>;
   return (
-    <AuthProvider>
-      <AppProvider>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.app}><AuthGate /></View>
-          <StatusBar style="dark" />
-        </SafeAreaView>
-      </AppProvider>
-    </AuthProvider>
+    <AppErrorBoundary>
+      <AuthProvider>
+        <AppProvider>
+          <SafeAreaView style={styles.safeArea}>
+            <View style={styles.app}><AuthGate /></View>
+            <StatusBar style="dark" />
+          </SafeAreaView>
+        </AppProvider>
+      </AuthProvider>
+    </AppErrorBoundary>
   );
 }
 

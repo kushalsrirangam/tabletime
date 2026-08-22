@@ -131,6 +131,7 @@ Approximately **86% complete**.
 - Expo Doctor initially identified the older Expo patch and duplicate `expo-constants`; after the SDK 57 patch alignment, all 18/18 checks pass
 - React quality review passed for the invitation provider, link listener cleanup, async action states, accessible alerts/buttons, and manager invitation controls
 - Supabase Security and Performance Advisors were rerun after the invitation migration; the only new security warning is the intentional, narrow authenticated invitation-acceptance RPC
+- Secure invitation commit `4d143de` was pushed to GitHub `main`; the linked Vercel production site returned HTTP 200 for both HTML and JavaScript, and the public bundle contains the new `Send secure invite` and `Activate account` interfaces
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 

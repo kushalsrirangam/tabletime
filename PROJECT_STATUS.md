@@ -6,13 +6,13 @@ This is the permanent project checkpoint. Read it before development work and up
 
 ## Current overall progress
 
-Approximately **97% complete**.
+Approximately **98% complete**.
 
 - Design and interactive MVP: **100%**
 - Database foundation: **100%**
 - Live backend connection: **100%**
 - Advanced restaurant features: **90%**
-- Store publication: **70%**
+- Store publication: **78%**
 
 ## Completed and verified
 
@@ -207,6 +207,11 @@ Approximately **97% complete**.
 - The first local recovery browser-test launch failed because Expo attempted to open the restricted Windows system browser; the server was restarted without the auto-open flag, the in-app test completed, and Metro then stopped cleanly
 - React best-practices review passed for the recovery provider and screens: explicit async actions, single deep-link listener cleanup, accessible controls and alerts, stable callbacks, and no nested component definitions or render-time side effects
 - The complete release gate passed after EAS linking and password recovery: strict TypeScript, Expo Doctor 18/18, production web export, and zero high/critical dependency findings; the iOS production EAS configuration also resolved successfully with the production environment
+- EAS generated and securely retained a new Android signing keystore; no keystore password or private key was written to the repository or local status notes
+- Android preview build `4a21820a-cc01-4be2-ac6e-44111187852e` finished successfully for SDK 57, app version 1.0.0/build 1, package `com.kushalsrirangam.tabletime`, and Git commit `3dae860`
+- The signed preview APK is available from the [stable Expo build page](https://expo.dev/accounts/kushalkings-team/projects/clockin/builds/4a21820a-cc01-4be2-ac6e-44111187852e); its download followed the expected redirects and returned HTTP 200 with a 72,737,588-byte Android artifact
+- No Android emulator was connected in this workspace, so the CLI install prompt was declined after the cloud artifact completed; installation and branded splash/adaptive-icon inspection remain a physical-device verification item
+- A concurrent sandboxed EAS status lookup encountered a local npm-cache/network `EACCES`; the approved EAS query retry succeeded and independently confirmed the build metadata and final `FINISHED` state
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -222,6 +227,7 @@ Approximately **97% complete**.
 - Password-reset email delivery, browser/native redirect, password update, and restored sign-in with a real account
 - A complete real-user deletion through the Edge Function is intentionally untested because it would permanently remove an existing test identity; use a disposable Auth identity for the final destructive E2E test
 - Branded splash rendering and adaptive-icon masking on physical Android/iOS release builds
+- Android preview APK installation and full smoke testing on a physical Android device; the current free-tier artifact expires September 5, 2026 and can be regenerated from the committed profile
 
 ## Failures and blockers
 
@@ -240,13 +246,13 @@ Approximately **97% complete**.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
 - The first sandboxed `expo install expo-splash-screen` attempt failed with network `EACCES`; the approved network retry installed the exact SDK 57-compatible package successfully.
 - “TableTime” is already used by unrelated apps in both stores, so the release display/listing name is now `TableTime Staff`; final trademark/name clearance remains the owner's responsibility.
-- Store publication still needs a real public support email, legal developer/company name and address, Expo/Apple/Google developer accounts, store credentials, screenshots, native builds, and final submissions. These values cannot be invented or committed as secrets.
+- Store publication still needs a real public support email, legal developer/company name and address, Apple/Google developer accounts, store credentials, screenshots, Android production/iOS builds, physical-device testing, and final submissions. These values cannot be invented or committed as secrets.
 
 ## Next work in order
 
 1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
 2. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
-3. Commit the linked EAS/recovery checkpoint, create and test Android/iOS builds, and capture store screenshots.
+3. Create the Android production bundle and iOS build, install and smoke-test native artifacts on physical devices, and capture store screenshots.
 4. Add an external production error-monitoring destination and verify its release alerting.
 5. Publish final legal pages with owner-supplied support/legal details, create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
 

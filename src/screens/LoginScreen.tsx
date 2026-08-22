@@ -6,8 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { colors, radius } from '../theme';
 
 export function LoginScreen() {
-  const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<'signIn' | 'create'>('signIn');
+  const { signIn, signUp, requestPasswordReset } = useAuth();
+  const [mode, setMode] = useState<'signIn' | 'create' | 'recover'>('signIn');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,7 +15,7 @@ export function LoginScreen() {
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
 
-  const disabled = submitting || !email.trim() || !password || (mode === 'create' && (!fullName.trim() || password.length < 8));
+  const disabled = submitting || !email.trim() || (mode !== 'recover' && !password) || (mode === 'create' && (!fullName.trim() || password.length < 8));
 
   const submit = async () => {
     if (disabled) return;
@@ -24,15 +24,19 @@ export function LoginScreen() {
     setNotice(undefined);
     if (mode === 'signIn') {
       setError(await signIn(email, password));
-    } else {
+    } else if (mode === 'create') {
       const result = await signUp(email, password, fullName);
       setError(result.error);
       if (result.emailConfirmationRequired) setNotice('Check your email to confirm the account, then return here to sign in.');
+    } else {
+      const resetError = await requestPasswordReset(email);
+      setError(resetError);
+      if (!resetError) setNotice('If a TableTime account exists for that email, a password-reset link is on its way. Check your inbox and spam folder.');
     }
     setSubmitting(false);
   };
 
-  const changeMode = (nextMode: 'signIn' | 'create') => {
+  const changeMode = (nextMode: 'signIn' | 'create' | 'recover') => {
     setMode(nextMode);
     setError(undefined);
     setNotice(undefined);
@@ -51,20 +55,20 @@ export function LoginScreen() {
       </View>
       <View style={styles.formPanel}>
         <View style={styles.form}>
-          <View style={styles.modeSwitch}>
+          {mode !== 'recover' ? <View style={styles.modeSwitch}>
             <Pressable onPress={() => changeMode('signIn')} style={[styles.modeOption, mode === 'signIn' && styles.modeOptionActive]}><Text style={[styles.modeText, mode === 'signIn' && styles.modeTextActive]}>Sign in</Text></Pressable>
             <Pressable onPress={() => changeMode('create')} style={[styles.modeOption, mode === 'create' && styles.modeOptionActive]}><Text style={[styles.modeText, mode === 'create' && styles.modeTextActive]}>Create restaurant</Text></Pressable>
-          </View>
-          <Text style={styles.title}>{mode === 'signIn' ? 'Welcome back' : 'Create your owner account'}</Text><Text style={styles.subtitle}>{mode === 'signIn' ? 'Sign in with the account your manager invited.' : 'Start with your account, then set up your restaurant and first location.'}</Text>
+          </View> : null}
+          <Text style={styles.title}>{mode === 'signIn' ? 'Welcome back' : mode === 'create' ? 'Create your owner account' : 'Reset your password'}</Text><Text style={styles.subtitle}>{mode === 'signIn' ? 'Sign in with the account your manager invited.' : mode === 'create' ? 'Start with your account, then set up your restaurant and first location.' : 'Enter your work email. We’ll send a secure link if it belongs to a TableTime account.'}</Text>
           {mode === 'create' ? <View style={styles.field}><Text style={styles.label}>Your full name</Text><TextInput accessibilityLabel="Your full name" autoCapitalize="words" autoComplete="name" value={fullName} onChangeText={setFullName} placeholder="Jordan Lee" placeholderTextColor="#929B96" style={styles.input} /></View> : null}
           <View style={styles.field}><Text style={styles.label}>Work email</Text><TextInput accessibilityLabel="Work email" autoCapitalize="none" keyboardType="email-address" autoComplete="email" value={email} onChangeText={setEmail} placeholder="you@restaurant.com" placeholderTextColor="#929B96" style={styles.input} /></View>
-          <View style={styles.field}><Text style={styles.label}>Password</Text><TextInput accessibilityLabel="Password" autoCapitalize="none" autoComplete={mode === 'create' ? 'new-password' : 'current-password'} secureTextEntry value={password} onChangeText={setPassword} placeholder={mode === 'create' ? 'At least 8 characters' : 'Enter your password'} placeholderTextColor="#929B96" style={styles.input} /></View>
+          {mode !== 'recover' ? <View style={styles.field}><View style={styles.labelRow}><Text style={styles.label}>Password</Text>{mode === 'signIn' ? <Pressable accessibilityRole="button" onPress={() => changeMode('recover')}><Text style={styles.forgot}>Forgot password?</Text></Pressable> : null}</View><TextInput accessibilityLabel="Password" autoCapitalize="none" autoComplete={mode === 'create' ? 'new-password' : 'current-password'} secureTextEntry value={password} onChangeText={setPassword} placeholder={mode === 'create' ? 'At least 8 characters' : 'Enter your password'} placeholderTextColor="#929B96" style={styles.input} /></View> : null}
           {error ? <View style={styles.error}><Ionicons name="alert-circle" size={16} color={colors.red} /><Text style={styles.errorText}>{error}</Text></View> : null}
           {notice ? <View style={styles.notice}><Ionicons name="mail" size={16} color={colors.forest} /><Text style={styles.noticeText}>{notice}</Text></View> : null}
           <Pressable accessibilityRole="button" onPress={submit} disabled={disabled} style={({ pressed }) => [styles.submit, disabled && styles.submitDisabled, pressed && styles.pressed]}>
-            {submitting ? <ActivityIndicator color={colors.surface} /> : <><Text style={styles.submitText}>{mode === 'signIn' ? 'Sign in' : 'Create account'}</Text><Ionicons name="arrow-forward" size={18} color={colors.surface} /></>}
+            {submitting ? <ActivityIndicator color={colors.surface} /> : <><Text style={styles.submitText}>{mode === 'signIn' ? 'Sign in' : mode === 'create' ? 'Create account' : 'Send reset link'}</Text><Ionicons name={mode === 'recover' ? 'mail-outline' : 'arrow-forward'} size={18} color={colors.surface} /></>}
           </Pressable>
-          <Text style={styles.help}>{mode === 'signIn' ? 'Need employee access? Ask your restaurant manager to invite you.' : 'Already have an account? Choose Sign in above.'}</Text>
+          {mode === 'recover' ? <Pressable accessibilityRole="button" onPress={() => changeMode('signIn')} style={styles.backButton}><Ionicons name="arrow-back" size={16} color={colors.forest} /><Text style={styles.backText}>Back to sign in</Text></Pressable> : <Text style={styles.help}>{mode === 'signIn' ? 'Need employee access? Ask your restaurant manager to invite you.' : 'Already have an account? Choose Sign in above.'}</Text>}
           <View style={styles.legalLinks}>
             <Pressable accessibilityRole="link" onPress={() => void Linking.openURL('https://tabletime-3qn4.vercel.app/privacy')}><Text style={styles.legalLink}>Privacy</Text></Pressable>
             <Text style={styles.legalDivider}>•</Text>
@@ -84,9 +88,10 @@ const styles = StyleSheet.create({
   promise: { maxWidth: 520 }, eyebrow: { color: colors.orange, fontSize: 11, fontWeight: '900', letterSpacing: 1.2 }, promiseTitle: { color: colors.surface, fontSize: 40, lineHeight: 46, fontWeight: '800', letterSpacing: -1.5, marginTop: 16 }, promiseCopy: { color: '#AAB6B0', fontSize: 15, lineHeight: 23, marginTop: 15, maxWidth: 430 },
   security: { flexDirection: 'row', alignItems: 'center', gap: 8 }, securityText: { color: '#BBD6C8', fontSize: 12, fontWeight: '700' },
   formPanel: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 28 }, form: { width: '100%', maxWidth: 420 }, modeSwitch: { flexDirection: 'row', padding: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceSoft, marginBottom: 24 }, modeOption: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: radius.pill }, modeOptionActive: { backgroundColor: colors.surface }, modeText: { color: colors.muted, fontSize: 12, fontWeight: '800' }, modeTextActive: { color: colors.ink }, title: { color: colors.ink, fontSize: 30, fontWeight: '800', letterSpacing: -1 }, subtitle: { color: colors.muted, fontSize: 14, lineHeight: 20, marginTop: 8, marginBottom: 29 },
-  field: { gap: 8, marginBottom: 17 }, label: { color: colors.ink, fontSize: 12, fontWeight: '800' }, input: { height: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 12, backgroundColor: colors.canvas, paddingHorizontal: 14, color: colors.ink, fontSize: 14 },
+  field: { gap: 8, marginBottom: 17 }, labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, label: { color: colors.ink, fontSize: 12, fontWeight: '800' }, forgot: { color: colors.forest, fontSize: 11, fontWeight: '800' }, input: { height: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 12, backgroundColor: colors.canvas, paddingHorizontal: 14, color: colors.ink, fontSize: 14 },
   error: { flexDirection: 'row', gap: 7, backgroundColor: colors.redSoft, borderRadius: 10, padding: 11, marginBottom: 14 }, errorText: { flex: 1, color: colors.red, fontSize: 12, lineHeight: 17 }, notice: { flexDirection: 'row', gap: 7, backgroundColor: colors.mint, borderRadius: 10, padding: 11, marginBottom: 14 }, noticeText: { flex: 1, color: colors.forest, fontSize: 12, lineHeight: 17 },
   submit: { height: 50, borderRadius: 12, backgroundColor: colors.forest, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, submitDisabled: { opacity: 0.45 }, submitText: { color: colors.surface, fontSize: 14, fontWeight: '800' }, pressed: { opacity: 0.78 }, help: { color: colors.muted, fontSize: 11, textAlign: 'center', marginTop: 18 },
   legalLinks: { marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 7 },
+  backButton: { minHeight: 42, marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, backText: { color: colors.forest, fontSize: 12, fontWeight: '800' },
   legalLink: { color: colors.forest, fontSize: 11, fontWeight: '700' }, legalDivider: { color: colors.border, fontSize: 11 },
 });

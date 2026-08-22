@@ -15,6 +15,7 @@ import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { AccountScreen } from './src/screens/AccountScreen';
 import { PublicDocumentKind, PublicDocumentScreen } from './src/screens/PublicDocumentScreen';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
+import { PasswordRecoveryScreen } from './src/screens/PasswordRecoveryScreen';
 import { colors } from './src/theme';
 import { TabKey } from './src/types';
 
@@ -59,8 +60,9 @@ function getPublicDocument(): PublicDocumentKind | undefined {
 }
 
 function AuthGate() {
-  const { backendConfigured, loading, session, workspaceLoading, workspaceError, hasMembership, invitationLoading, invitationPending, refreshMembership, signOut } = useAuth();
-  if (loading || invitationLoading || (backendConfigured && session && workspaceLoading && !invitationPending)) return <View style={styles.loading}><ActivityIndicator size="large" color={colors.forest} /></View>;
+  const { backendConfigured, loading, session, workspaceLoading, workspaceError, hasMembership, invitationLoading, invitationPending, recoveryLoading, recoveryPending, refreshMembership, signOut } = useAuth();
+  if (loading || invitationLoading || recoveryLoading || (backendConfigured && session && workspaceLoading && !invitationPending && !recoveryPending)) return <View style={styles.loading}><ActivityIndicator size="large" color={colors.forest} /></View>;
+  if (backendConfigured && recoveryPending) return <PasswordRecoveryScreen />;
   if (backendConfigured && invitationPending) return <InvitationSetupScreen />;
   if (backendConfigured && !session) return <LoginScreen />;
   if (backendConfigured && session && workspaceError) return <View style={styles.loading}><Text style={styles.errorTitle}>We couldn’t load your restaurant</Text><Text style={styles.errorCopy}>{workspaceError}</Text><View style={styles.errorActions}><Pressable onPress={refreshMembership} style={styles.retry}><Text style={styles.retryText}>Try again</Text></Pressable><Pressable onPress={signOut} style={styles.signOut}><Text style={styles.signOutText}>Sign out</Text></Pressable></View></View>;

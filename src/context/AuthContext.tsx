@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
 import React, { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { Platform } from 'react-native';
 import { isBackendConfigured, supabase } from '../lib/supabase';
 
 export type WorkspaceRole = 'owner' | 'manager' | 'employee';
@@ -31,11 +32,17 @@ type AuthContextValue = {
   invitationLoading: boolean;
   invitationPending: boolean;
   invitationError?: string;
+  recoveryLoading: boolean;
+  recoveryPending: boolean;
+  recoveryError?: string;
   signIn: (email: string, password: string) => Promise<string | undefined>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string; emailConfirmationRequired?: boolean }>;
+  requestPasswordReset: (email: string) => Promise<string | undefined>;
   signOut: () => Promise<void>;
   completeInvitation: (password: string) => Promise<string | undefined>;
   cancelInvitation: () => Promise<void>;
+  completePasswordRecovery: (password: string) => Promise<string | undefined>;
+  cancelPasswordRecovery: () => Promise<void>;
   deleteAccount: (password: string) => Promise<{ error?: string; message?: string }>;
   refreshMembership: () => Promise<void>;
 };
@@ -79,7 +86,7 @@ async function edgeFunctionErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
-function readInvitationTokens(url: string) {
+function readAuthTokens(url: string) {
   const hashIndex = url.indexOf('#');
   const queryIndex = url.indexOf('?');
   const queryEnd = hashIndex >= 0 ? hashIndex : url.length;
@@ -95,9 +102,22 @@ function readInvitationTokens(url: string) {
   };
 }
 
-function clearInvitationUrl() {
+function clearAuthUrl() {
   if (typeof window === 'undefined') return;
-  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+  const path = ['/invite', '/reset-password'].includes(window.location.pathname) ? '/' : window.location.pathname;
+  window.history.replaceState(null, '', path);
+}
+
+function passwordRecoveryRedirectUrl() {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') return `${window.location.origin}/reset-password`;
+  return 'tabletime://reset-password';
+}
+
+function passwordResetErrorMessage(message: string) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes('rate') || normalized.includes('too many')) return 'Too many reset emails were requested. Wait a few minutes and try again.';
+  if (isTransientWorkspaceError(message)) return 'The reset email could not be requested because the network is unavailable. Check your connection and try again.';
+  return 'The reset email could not be requested right now. Try again in a few minutes.';
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
@@ -110,17 +130,27 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [invitationLoading, setInvitationLoading] = useState(false);
   const [invitationPending, setInvitationPending] = useState(false);
   const [invitationError, setInvitationError] = useState<string>();
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryPending, setRecoveryPending] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<string>();
 
-  const handleInvitationUrl = useCallback(async (url: string) => {
-    const tokens = readInvitationTokens(url);
-    if (tokens.type !== 'invite') return false;
+  const handleAuthUrl = useCallback(async (url: string) => {
+    const tokens = readAuthTokens(url);
+    if (tokens.type !== 'invite' && tokens.type !== 'recovery') return false;
 
-    setInvitationPending(true);
-    setInvitationLoading(true);
-    setInvitationError(undefined);
+    const invitation = tokens.type === 'invite';
+    const setPending = invitation ? setInvitationPending : setRecoveryPending;
+    const setLinkLoading = invitation ? setInvitationLoading : setRecoveryLoading;
+    const setLinkError = invitation ? setInvitationError : setRecoveryError;
+
+    setPending(true);
+    setLinkLoading(true);
+    setLinkError(undefined);
     if (!supabase || !tokens.accessToken || !tokens.refreshToken) {
-      setInvitationError('This invitation link is incomplete or expired. Ask your manager to send a new invitation.');
-      setInvitationLoading(false);
+      setLinkError(invitation
+        ? 'This invitation link is incomplete or expired. Ask your manager to send a new invitation.'
+        : 'This password-reset link is incomplete or expired. Request a new reset email.');
+      setLinkLoading(false);
       return true;
     }
 
@@ -128,8 +158,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       access_token: tokens.accessToken,
       refresh_token: tokens.refreshToken,
     });
-    if (error) setInvitationError(`This invitation could not be opened. ${error.message}`);
-    setInvitationLoading(false);
+    if (error) setLinkError(invitation
+      ? `This invitation could not be opened. ${error.message}`
+      : 'This password-reset link could not be opened. Request a new reset email.');
+    setLinkLoading(false);
     return true;
   }, []);
 
@@ -141,7 +173,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const initialize = async () => {
       try {
         const initialUrl = await Linking.getInitialURL();
-        if (initialUrl) await handleInvitationUrl(initialUrl);
+        if (initialUrl) await handleAuthUrl(initialUrl);
         const { data } = await client.auth.getSession();
         if (!active) return;
         setWorkspaceLoading(Boolean(data.session));
@@ -154,19 +186,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
     void initialize();
 
-    const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = client.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryPending(true);
+        setRecoveryError(undefined);
+      }
       setWorkspaceLoading(Boolean(nextSession));
       setSession(nextSession);
     });
     const linkSubscription = Linking.addEventListener('url', ({ url }) => {
-      void handleInvitationUrl(url);
+      void handleAuthUrl(url);
     });
     return () => {
       active = false;
       data.subscription.unsubscribe();
       linkSubscription.remove();
     };
-  }, [handleInvitationUrl]);
+  }, [handleAuthUrl]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     if (!supabase) return 'Backend credentials are not configured.';
@@ -184,12 +220,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return { error: error?.message, emailConfirmationRequired: !error && !data.session };
   }, []);
 
+  const requestPasswordReset = useCallback(async (email: string) => {
+    if (!supabase) return 'Backend credentials are not configured.';
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: passwordRecoveryRedirectUrl(),
+    });
+    return error ? passwordResetErrorMessage(error.message) : undefined;
+  }, []);
+
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut();
     setInvitationPending(false);
     setInvitationLoading(false);
     setInvitationError(undefined);
-    clearInvitationUrl();
+    setRecoveryPending(false);
+    setRecoveryLoading(false);
+    setRecoveryError(undefined);
+    clearAuthUrl();
   }, []);
 
   const refreshMembership = useCallback(async () => {
@@ -295,12 +342,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     setInvitationPending(false);
     setInvitationError(undefined);
-    clearInvitationUrl();
+    clearAuthUrl();
     await refreshMembership();
     return undefined;
   }, [refreshMembership, session]);
 
   const cancelInvitation = useCallback(async () => {
+    await signOut();
+  }, [signOut]);
+
+  const completePasswordRecovery = useCallback(async (password: string) => {
+    if (!supabase || !session) return 'The password-reset session is missing. Request a new reset email.';
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return error.message;
+
+    setRecoveryPending(false);
+    setRecoveryError(undefined);
+    clearAuthUrl();
+    await refreshMembership();
+    return undefined;
+  }, [refreshMembership, session]);
+
+  const cancelPasswordRecovery = useCallback(async () => {
     await signOut();
   }, [signOut]);
 
@@ -321,7 +384,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setWorkspace(null);
     setWorkspaceError(undefined);
     setInvitationPending(false);
-    clearInvitationUrl();
+    setRecoveryPending(false);
+    clearAuthUrl();
     return { message: (data as { message?: string } | null)?.message ?? 'Your account was deleted.' };
   }, [session]);
 
@@ -336,14 +400,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
     invitationLoading,
     invitationPending,
     invitationError,
+    recoveryLoading,
+    recoveryPending,
+    recoveryError,
     signIn,
     signUp,
+    requestPasswordReset,
     signOut,
     completeInvitation,
     cancelInvitation,
+    completePasswordRecovery,
+    cancelPasswordRecovery,
     deleteAccount,
     refreshMembership,
-  }), [cancelInvitation, completeInvitation, deleteAccount, hasMembership, invitationError, invitationLoading, invitationPending, loading, refreshMembership, session, signIn, signOut, signUp, workspace, workspaceError, workspaceLoading]);
+  }), [cancelInvitation, cancelPasswordRecovery, completeInvitation, completePasswordRecovery, deleteAccount, hasMembership, invitationError, invitationLoading, invitationPending, loading, recoveryError, recoveryLoading, recoveryPending, refreshMembership, requestPasswordReset, session, signIn, signOut, signUp, workspace, workspaceError, workspaceLoading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

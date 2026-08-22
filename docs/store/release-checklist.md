@@ -15,7 +15,8 @@
 - [x] High-severity Metro dependency findings resolved with the SDK-compatible 0.84.5 patch
 - [x] GitHub Actions release-quality workflow passed on the supported Node version
 - [x] Vercel deployed and served the release-quality commit successfully
-- [ ] Expo account linked and EAS project ID written by `eas init`
+- [x] Expo account linked and EAS project ID verified through `eas project:info`
+- [x] Preview and production EAS environments contain the client-safe backend configuration
 - [ ] Android preview APK built and tested on a physical device
 - [ ] Android production AAB built successfully
 - [ ] iOS production IPA built successfully
@@ -25,6 +26,7 @@
 - [ ] Owner onboarding verified end to end
 - [ ] Manager employee add/edit/status/pay workflow verified end to end
 - [ ] Invitation email, redirect, password creation, and activation verified end to end
+- [ ] Password-reset email, redirect, password update, and restored sign-in verified end to end
 - [ ] Employee clock-in, break, clock-out, and persistence verified end to end
 - [ ] Employee request and manager review verified end to end
 - [ ] Realtime cross-client update verified end to end

@@ -11,8 +11,8 @@ Approximately **97% complete**.
 - Design and interactive MVP: **100%**
 - Database foundation: **100%**
 - Live backend connection: **100%**
-- Advanced restaurant features: **88%**
-- Store publication: **65%**
+- Advanced restaurant features: **90%**
+- Store publication: **70%**
 
 ## Completed and verified
 
@@ -196,6 +196,17 @@ Approximately **97% complete**.
 - GitHub commit `d9ae7a6` (`Add release quality gate and recovery`) is pushed to `main`; its first `Release quality` workflow run `32597903723` completed successfully
 - Vercel automatically deployed commit `d9ae7a6` as production bundle `index-56c67870a29dd7590c8308481387c4b7.js`; the bundle and `/privacy` returned HTTP 200 and the deployed code contains the new recovery interface
 - The first production-bundle verification script accidentally used PowerShell's reserved case-insensitive `$HOME` variable and failed before resolving the bundle name; it was corrected to task-specific variable names and the complete verification passed
+- Expo CLI browser authorization completed for account `kushalking`, with owner access to both the personal account and `kushalkings-team`
+- The application is linked to EAS project `@kushalkings-team/clockin` with project ID `987d4ad1-dce6-4e49-b43a-bfbe89c8820c`; `eas project:info` verifies the exact owner, slug, and ID
+- The first `eas init` prompt was cancelled after exposing that the owner-created remote slug `clockin` did not match local slug `tabletime`; EAS has no project-edit CLI command, so the internal local slug was aligned to `clockin` while the public name and both store identifiers remain TableTime Staff / `com.kushalsrirangam.tabletime`
+- EAS Preview and Production environments now contain only the client-safe Supabase URL and publishable key; both build profiles explicitly select their matching environment, and `eas config` verified the Android preview APK configuration with Node 22.13.0
+- Self-service password recovery now follows Supabase's documented reset-email flow, handles recovery tokens separately from employee invitations, requires matching 8-character passwords, updates the password only inside an authenticated recovery session, and clears recovery URLs/session state safely
+- The reset-email confirmation uses non-enumerating language so the UI does not disclose whether an account exists; rate-limit, network, expired-link, and missing-session errors have stable user-facing messages
+- Supabase's current changelog and password recovery reference were reviewed before implementation; no hosted breaking change affects the client-side implicit recovery flow, while the June 2026 Free-tier email-template restriction is documented for later SMTP decisions
+- Local browser verification passed for the Forgot password entry point, disabled/enabled form validation, and incomplete/expired recovery-link screen; the browser reported only expected React development notices and no errors or warnings
+- The first local recovery browser-test launch failed because Expo attempted to open the restricted Windows system browser; the server was restarted without the auto-open flag, the in-app test completed, and Metro then stopped cleanly
+- React best-practices review passed for the recovery provider and screens: explicit async actions, single deep-link listener cleanup, accessible controls and alerts, stable callbacks, and no nested component definitions or render-time side effects
+- The complete release gate passed after EAS linking and password recovery: strict TypeScript, Expo Doctor 18/18, production web export, and zero high/critical dependency findings; the iOS production EAS configuration also resolved successfully with the production environment
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -208,6 +219,7 @@ Approximately **97% complete**.
 - Live workspace identity and role loading for an owner account
 - Employee creation, editing, location assignment, pay updates, and activation/deactivation using a real owner or manager account
 - Invitation email delivery, browser/mobile redirect, password setup, and final employee activation with a real newly invited account
+- Password-reset email delivery, browser/native redirect, password update, and restored sign-in with a real account
 - A complete real-user deletion through the Edge Function is intentionally untested because it would permanently remove an existing test identity; use a disposable Auth identity for the final destructive E2E test
 - Branded splash rendering and adaptive-icon masking on physical Android/iOS release builds
 
@@ -223,10 +235,9 @@ Approximately **97% complete**.
 - Supabase leaked-password protection is still disabled and should be enabled before launch. See the [password-security guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Performance Advisor reports only unused-index informational notices. This is expected before realistic traffic; index usage must be reassessed after production-like usage. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
 - Employee roster add/edit/deactivate is wired to the live database but still requires a real authenticated owner or manager test.
-- Hosted Supabase Auth still needs its Site URL set to `https://tabletime-3qn4.vercel.app` and its redirect allowlist updated with `https://tabletime-3qn4.vercel.app/**` and `tabletime://invite`. The exact settings are committed in `supabase/config.toml`, but `supabase config push` failed because the local CLI has no Supabase access token, and the available dashboard browser session was signed out. Invitation email delivery and redirect acceptance cannot be verified until this one hosted setting is applied after Supabase sign-in.
+- Hosted Supabase Auth still needs its Site URL set to `https://tabletime-3qn4.vercel.app` and its redirect allowlist updated with `https://tabletime-3qn4.vercel.app/**`, `tabletime://invite`, and `tabletime://reset-password`. The exact settings are committed in `supabase/config.toml`, but `supabase config push` failed because the local CLI has no Supabase access token, and the available dashboard browser session was signed out. Invitation and password-recovery email redirects cannot be verified until this hosted setting is applied after Supabase sign-in.
 - npm reports 11 moderate and **zero high/critical** issues in transitive Expo/Xcode build tooling. The patched Metro 0.84.5 update removed all four high findings. A forced fix would perform an unsafe Expo downgrade, so it was not applied.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
-- EAS CLI is not authenticated. An Expo account must be signed in through the CLI's browser flow before `eas init` or cloud Android/iOS builds can run; no Expo credentials are stored in the repository.
 - The first sandboxed `expo install expo-splash-screen` attempt failed with network `EACCES`; the approved network retry installed the exact SDK 57-compatible package successfully.
 - “TableTime” is already used by unrelated apps in both stores, so the release display/listing name is now `TableTime Staff`; final trademark/name clearance remains the owner's responsibility.
 - Store publication still needs a real public support email, legal developer/company name and address, Expo/Apple/Google developer accounts, store credentials, screenshots, native builds, and final submissions. These values cannot be invented or committed as secrets.
@@ -235,8 +246,8 @@ Approximately **97% complete**.
 
 1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
 2. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
-3. Complete the waiting Expo browser authorization, run `eas init`, verify the GitHub quality workflow, and add an external production error-monitoring destination.
-4. Create and test Android/iOS builds and capture store screenshots.
+3. Commit the linked EAS/recovery checkpoint, create and test Android/iOS builds, and capture store screenshots.
+4. Add an external production error-monitoring destination and verify its release alerting.
 5. Publish final legal pages with owner-supplied support/legal details, create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
 
 ## Rule for future updates

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "TableTime Staff",
-    "slug": "tabletime",
+    "slug": "clockin",
     "description": "Restaurant staff scheduling, time clock, breaks, requests, and team management in one secure workspace.",
     "version": "1.0.0",
     "scheme": "tabletime",
@@ -53,6 +53,12 @@
           "resizeMode": "contain"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "987d4ad1-dce6-4e49-b43a-bfbe89c8820c"
+      }
+    },
+    "owner": "kushalkings-team"
   }
 }

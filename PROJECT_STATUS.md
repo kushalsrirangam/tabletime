@@ -212,6 +212,10 @@ Approximately **98% complete**.
 - The signed preview APK is available from the [stable Expo build page](https://expo.dev/accounts/kushalkings-team/projects/clockin/builds/4a21820a-cc01-4be2-ac6e-44111187852e); its download followed the expected redirects and returned HTTP 200 with a 72,737,588-byte Android artifact
 - No Android emulator was connected in this workspace, so the CLI install prompt was declined after the cloud artifact completed; installation and branded splash/adaptive-icon inspection remain a physical-device verification item
 - A concurrent sandboxed EAS status lookup encountered a local npm-cache/network `EACCES`; the approved EAS query retry succeeded and independently confirmed the build metadata and final `FINISHED` state
+- Redundant local Android `versionCode` and iOS `buildNumber` values were removed because EAS remote app-version management is authoritative; production `eas config` resolves successfully for both platforms with `autoIncrement` and Node 22.13.0
+- The first sandboxed release-gate run after the version cleanup was blocked when Expo Doctor could not access the npm cache/network; the approved retry passed strict TypeScript, Expo Doctor 18/18, web export, and the zero-high/critical audit threshold
+- GitHub Actions `Release quality` run `32599392855` passed for checkpoint commit `f6f8885`, and GitHub reports successful Vercel deployment checks for both linked Vercel project records
+- The first non-interactive iOS build preflight stopped before Apple credential resolution because the verified `app.json` cleanup had not yet been committed; no iOS build or credential change occurred, and committing the clean configuration is the required retry step
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 

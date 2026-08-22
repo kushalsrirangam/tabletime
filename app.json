@@ -11,14 +11,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kushalsrirangam.tabletime",
-      "buildNumber": "1",
       "config": {
         "usesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.kushalsrirangam.tabletime",
-      "versionCode": 1,
       "allowBackup": false,
       "blockedPermissions": [
         "android.permission.READ_EXTERNAL_STORAGE",

@@ -5,6 +5,7 @@ import { colors, radius } from '../theme';
 import { TabKey, UserRole } from '../types';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
+import { Button } from './UI';
 
 type NavItem = { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; managerOnly?: boolean };
 const navItems: NavItem[] = [
@@ -36,7 +37,7 @@ function RoleSwitch({ role, onChange }: { role: UserRole; onChange: (role: UserR
 export function AppShell({ activeTab, onTabChange, children }: Props) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
-  const { role, setRole, requests } = useApp();
+  const { role, setRole, requests, dataLoading, dataError, lastSyncedAt, realtimeStatus, refreshLiveData } = useApp();
   const { backendConfigured, signOut, workspace } = useAuth();
   const visibleNav = navItems.filter((item) => role === 'manager' || !item.managerOnly);
   const pendingCount = requests.filter((request) => request.status === 'pending').length;
@@ -44,6 +45,8 @@ export function AppShell({ activeTab, onTabChange, children }: Props) {
   const locationName = workspace?.locationName ?? (backendConfigured ? 'Restaurant workspace' : 'North Loop · Chicago');
   const personName = workspace?.fullName ?? 'Jordan Lee';
   const personRole = workspace?.jobTitle ?? (role === 'manager' ? 'General Manager' : 'Team member');
+  const syncProblem = dataError ?? (realtimeStatus === 'degraded' ? 'Live updates are temporarily paused. Refresh now to confirm the latest restaurant data.' : undefined);
+  const lastSyncLabel = lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : undefined;
 
   return (
     <View style={styles.root}>
@@ -86,6 +89,7 @@ export function AppShell({ activeTab, onTabChange, children }: Props) {
           ) : <Text style={styles.restaurantName}>{restaurantName}</Text>}
           {!backendConfigured ? <RoleSwitch role={role} onChange={(nextRole) => { setRole(nextRole); if (nextRole === 'employee' && activeTab === 'team') onTabChange('home'); }} /> : null}
           {!backendConfigured && isDesktop ? <View style={styles.demoPill}><View style={styles.demoDot} /><Text style={styles.demoText}>DEMO</Text></View> : null}
+          {backendConfigured ? <View accessibilityLabel={`Data sync ${realtimeStatus}`} style={styles.livePill}><View style={[styles.liveDot, realtimeStatus !== 'live' && styles.liveDotDegraded]} /><Text style={styles.liveText}>{realtimeStatus === 'live' ? 'LIVE' : realtimeStatus === 'connecting' ? 'SYNCING' : 'RETRYING'}</Text></View> : null}
           {backendConfigured && !isDesktop ? <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={signOut} style={styles.iconButton}><Ionicons name="log-out-outline" size={20} color={colors.ink} /></Pressable> : null}
           {isDesktop ? (
             <Pressable style={styles.iconButton}><Ionicons name="notifications-outline" size={21} color={colors.ink} /><View style={styles.dot} /></Pressable>
@@ -93,6 +97,13 @@ export function AppShell({ activeTab, onTabChange, children }: Props) {
         </View>
 
         <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, !isDesktop && styles.mobileContent]} showsVerticalScrollIndicator={false}>
+          {backendConfigured && syncProblem ? (
+            <View accessibilityRole="alert" style={styles.syncBanner}>
+              <Ionicons name="cloud-offline-outline" size={20} color={colors.red} />
+              <View style={styles.syncCopy}><Text style={styles.syncTitle}>Connection needs attention</Text><Text style={styles.syncText}>{syncProblem}{lastSyncLabel ? ` Last synced at ${lastSyncLabel}.` : ''}</Text></View>
+              <Button label={dataLoading ? 'Refreshing…' : 'Refresh now'} icon="refresh-outline" compact variant="secondary" loading={dataLoading} onPress={() => { void refreshLiveData(); }} />
+            </View>
+          ) : null}
           {children}
         </ScrollView>
 
@@ -140,10 +151,12 @@ const styles = StyleSheet.create({
   roleOption: { paddingHorizontal: 11, paddingVertical: 7, borderRadius: radius.pill }, roleOptionActive: { backgroundColor: colors.surface },
   roleText: { color: colors.muted, fontSize: 11, fontWeight: '700' }, roleTextActive: { color: colors.ink },
   demoPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.orangeSoft }, demoDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.orange }, demoText: { color: '#9A4F22', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  livePill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.mint }, liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.forest }, liveDotDegraded: { backgroundColor: colors.orange }, liveText: { color: colors.forest, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
   iconButton: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   dot: { position: 'absolute', width: 7, height: 7, borderRadius: 4, backgroundColor: colors.orange, right: 8, top: 7, borderWidth: 1, borderColor: colors.surface },
   scroll: { flex: 1 }, content: { width: '100%', maxWidth: 1240, alignSelf: 'center', paddingHorizontal: 34, paddingTop: 30, paddingBottom: 42 },
   mobileContent: { paddingHorizontal: 18, paddingTop: 22, paddingBottom: 100 },
+  syncBanner: { marginBottom: 18, padding: 13, borderWidth: 1, borderColor: colors.red, borderRadius: 12, backgroundColor: colors.redSoft, flexDirection: 'row', alignItems: 'center', gap: 11 }, syncCopy: { flex: 1 }, syncTitle: { color: colors.red, fontSize: 12, fontWeight: '800' }, syncText: { color: colors.red, fontSize: 11, lineHeight: 16, marginTop: 2 },
   bottomNav: { minHeight: 76, paddingBottom: 8, flexDirection: 'row', backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
   bottomItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 },
   bottomLabel: { color: colors.muted, fontSize: 10, fontWeight: '600' }, bottomLabelActive: { color: colors.forest, fontWeight: '800' },

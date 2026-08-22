@@ -6,12 +6,12 @@ This is the permanent project checkpoint. Read it before development work and up
 
 ## Current overall progress
 
-Approximately **91% complete**.
+Approximately **93% complete**.
 
 - Design and interactive MVP: **99%**
 - Database foundation: **100%**
 - Live backend connection: **100%**
-- Advanced restaurant features: **58%**
+- Advanced restaurant features: **70%**
 - Store publication: **25%**
 
 ## Completed and verified
@@ -149,6 +149,18 @@ Approximately **91% complete**.
 - The first break migration attempt failed atomically because PostgreSQL does not allow a composite row variable in a multiple-item `INTO` list; the lookup was split safely, the corrected migration applied, and no partial schema changes remained
 - Live and demo time-clock interfaces now share start/end-break controls with action locks, accessible errors, synchronized status, and recorded break minutes; the dashboard also blocks clock actions while a break change is in flight
 - Supabase Security and Performance Advisors, TypeScript validation, and the production web export were rerun after the break workflow; no unintended new advisor findings or code/build failures were introduced
+- Git commit `b158a23` (`Add live requests and break tracking`) was pushed to GitHub `main`; Vercel automatically deployed it and the production HTML and new JavaScript bundle both returned HTTP 200
+- The deployed production bundle contains the live request and break interfaces; a full employee-session reload confirmed the new ISO start/end-date request form, no demo request rows, and no browser console errors or warnings
+- A first Realtime implementation used Supabase's recommended private Broadcast architecture with organization topics and generic invalidation payloads that intentionally excluded employee, pay, request, and punch row contents
+- Hosted verification found the restored project has zero partitions under the platform-owned `realtime.messages` table; direct and trigger-driven Broadcast sends were silently discarded with `no partition of relation "messages" found for row`
+- The unavailable Broadcast trigger, function, and authorization policy were removed cleanly; verification confirms no leftover Broadcast objects
+- The reliable fallback uses RLS-protected Postgres Changes for organizations, memberships, locations, employees, shifts, time entries, breaks, and requests, all verified in the `supabase_realtime` publication
+- The app now maintains one workspace Realtime channel, filters organization-scoped tables, debounces bursts into one silent refresh, refreshes unfiltered break events through RLS, cleans up listeners/channels, and reauthenticates Realtime with the current session token
+- A `LIVE`/`SYNCING`/`RETRYING` indicator exposes connection state without developer tools, while a global recovery banner preserves the last successful data, reports the last sync time, and offers manual refresh
+- Workspace and data loading now retry transient network/timeout/5xx failures twice with bounded backoff, show a clear database-waking message, and resynchronize silently when the app returns to the foreground
+- Configured cloud workspaces clear all demo employees, locations, shifts, requests, punches, and breaks before the first live load, preventing demo data from appearing during a backend outage
+- Realtime and foreground refreshes use silent loading to avoid hiding visible schedules/rosters during background synchronization
+- The first post-Realtime typecheck caught a direct Pressable handler that no longer matched the new optional silent-refresh argument; the handler was wrapped correctly and the subsequent typecheck passed
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -158,6 +170,7 @@ Approximately **91% complete**.
 - Owner sign-up, email confirmation, and bootstrap using a real user account
 - Production-browser request submission and manager review using the real test employee and manager accounts
 - Production-browser live break start/end and refresh persistence using the real employee test account
+- Production-browser Realtime subscription reaching `LIVE` and reacting to a second-client database change
 - Live workspace identity and role loading for an owner account
 - Employee creation, editing, location assignment, pay updates, and activation/deactivation using a real owner or manager account
 - Invitation email delivery, browser/mobile redirect, password setup, and final employee activation with a real newly invited account
@@ -168,6 +181,7 @@ Approximately **91% complete**.
 - Docker Desktop's Linux engine returned an internal API error. Local Supabase still cannot start, although both migrations are now applied and verified in the dedicated cloud project.
 - The pre-existing cloud project named `kushalsrirangam's Project` remains untouched.
 - The free Supabase project automatically became `INACTIVE` after low activity, causing database timeouts and a failed production login until it was manually restored. It is healthy again, but an always-on paid plan or an explicit development wake-up/health-check process is required for reliable unattended availability.
+- Private Realtime Broadcast is currently unusable on the restored free project because the platform-owned `realtime.messages` table has no date partitions. TableTime now uses RLS-protected Postgres Changes successfully as a restaurant-scale fallback; revisit Broadcast only after Supabase restores automatic message partition management.
 - Supabase Security Advisor reports eight intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap, clock, break, employee-invitation acceptance, request-submission, and request-review RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
 - Supabase leaked-password protection is still disabled and should be enabled before launch. See the [password-security guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Performance Advisor reports only unused-index informational notices. This is expected before realistic traffic; index usage must be reassessed after production-like usage. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
@@ -179,13 +193,12 @@ Approximately **91% complete**.
 
 ## Next work in order
 
-1. Commit, push, and verify the request/break release on the linked Vercel production project.
+1. Commit, push, and verify the Realtime/recovery release reaches `LIVE` in the production employee session.
 2. Sign in to Supabase once, push or enter the committed Auth Site URL/redirect allowlist, then verify one complete invitation email and password-acceptance flow.
 3. Test production-browser request submission/review, live breaks, employee add/edit/location/pay/status, and real owner onboarding.
-4. Add Realtime updates plus resilient offline/retry handling and a clear health/recovery path for an inactive development database.
-5. Resolve the local Node/npm diagnostic process issue, upgrade Node to a supported release, and reassess the remaining build-time npm advisories.
-6. Decide between free-tier wake-up handling and an always-on Supabase plan before production launch.
-7. Prepare native Android and iOS release builds, store assets, privacy disclosures, and store submissions after the live workflows are verified.
+4. Resolve the local Node/npm diagnostic process issue, upgrade Node to a supported release, and reassess the remaining build-time npm advisories.
+5. Decide between free-tier wake-up handling and an always-on Supabase plan before production launch.
+6. Prepare native Android and iOS release builds, store assets, privacy disclosures, and store submissions after the live workflows are verified.
 
 ## Rule for future updates
 

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { employees as initialEmployees, initialRequests, shifts as initialShifts } from '../data';
 import { supabase } from '../lib/supabase';
 import { ClockEntry, Employee, EmploymentStatus, NewShiftInput, NewTimeOffInput, SaveEmployeeInput, Shift, StaffRequest, UserRole, WorkLocation } from '../types';
@@ -19,6 +20,8 @@ type AppContextValue = StoredState & {
   hydrated: boolean;
   dataLoading: boolean;
   dataError?: string;
+  lastSyncedAt?: number;
+  realtimeStatus: 'disabled' | 'connecting' | 'live' | 'degraded';
   liveClockEnabled: boolean;
   clockActionLoading: boolean;
   clockActionError?: string;
@@ -39,7 +42,7 @@ type AppContextValue = StoredState & {
   saveEmployee: (input: SaveEmployeeInput) => Promise<void>;
   inviteEmployee: (employeeId: string) => Promise<string>;
   publishSchedule: () => Promise<void>;
-  refreshLiveData: () => Promise<void>;
+  refreshLiveData: (options?: { silent?: boolean }) => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -114,6 +117,21 @@ function requestErrorMessage(message: string) {
   return `The request could not be completed. ${message}`;
 }
 
+function isTransientDataError(message: string) {
+  const normalized = message.toLowerCase();
+  return ['fetch', 'network', 'timeout', 'timed out', 'connection', 'socket', '502', '503', '504'].some((fragment) => normalized.includes(fragment));
+}
+
+function liveDataErrorMessage(message: string) {
+  if (isTransientDataError(message)) return 'The restaurant database is temporarily unavailable. Your last successful data is still shown; retry in a moment.';
+  if (message.toLowerCase().includes('jwt')) return 'Your session expired. Sign in again to refresh restaurant data.';
+  return `Restaurant data could not be refreshed. ${message}`;
+}
+
+function wait(milliseconds: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+}
+
 async function invitationErrorMessage(error: unknown) {
   const fallback = error instanceof Error ? error.message : 'The invitation could not be sent.';
   const context = (error as { context?: Response } | null)?.context;
@@ -137,6 +155,8 @@ export function AppProvider({ children }: PropsWithChildren) {
   const [hydrated, setHydrated] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState<string>();
+  const [lastSyncedAt, setLastSyncedAt] = useState<number>();
+  const [realtimeStatus, setRealtimeStatus] = useState<'disabled' | 'connecting' | 'live' | 'degraded'>(backendConfigured ? 'connecting' : 'disabled');
   const [clockActionLoading, setClockActionLoading] = useState(false);
   const [clockActionError, setClockActionError] = useState<string>();
   const [breakActionLoading, setBreakActionLoading] = useState(false);
@@ -174,6 +194,11 @@ export function AppProvider({ children }: PropsWithChildren) {
     if (!backendConfigured) return;
     setClockEntries([]);
     setRequests([]);
+    setEmployees([]);
+    setLocations([]);
+    setShifts([]);
+    setLastSyncedAt(undefined);
+    setRealtimeStatus('connecting');
     setOnBreak(false);
     setClockActionError(undefined);
     setBreakActionError(undefined);
@@ -184,15 +209,17 @@ export function AppProvider({ children }: PropsWithChildren) {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ clockEntries, onBreak, requests, shifts, employees })).catch(() => undefined);
   }, [backendConfigured, clockEntries, employees, hydrated, onBreak, requests, shifts]);
 
-  const refreshLiveData = useCallback(async () => {
+  const refreshLiveData = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
     if (!backendConfigured || !workspace || !supabase) {
       setDataLoading(false);
       setDataError(undefined);
       return;
     }
 
-    setDataLoading(true);
+    if (!silent) setDataLoading(true);
     setDataError(undefined);
+    const client = supabase;
     const rangeStart = new Date();
     rangeStart.setDate(rangeStart.getDate() - 1);
     rangeStart.setHours(0, 0, 0, 0);
@@ -201,26 +228,35 @@ export function AppProvider({ children }: PropsWithChildren) {
     const timeRangeStart = new Date();
     timeRangeStart.setDate(timeRangeStart.getDate() - 7);
 
-    const personalTimeQuery = workspace.employeeId
-      ? supabase.from('time_entries').select('id, employee_id, clocked_in_at, clocked_out_at').eq('organization_id', workspace.organizationId).eq('employee_id', workspace.employeeId).order('clocked_in_at', { ascending: false }).limit(20)
-      : Promise.resolve({ data: [], error: null });
-    const personalBreakQuery = workspace.employeeId
-      ? supabase.from('break_entries').select('time_entry_id, started_at, ended_at, time_entries!inner(employee_id, organization_id)').eq('time_entries.organization_id', workspace.organizationId).eq('time_entries.employee_id', workspace.employeeId).order('started_at', { ascending: false }).limit(100)
-      : Promise.resolve({ data: [], error: null });
-    const [employeeResult, locationResult, shiftResult, timeResult, personalTimeResult, requestResult, personalBreakResult] = await Promise.all([
-      supabase.from('employees').select('id, full_name, email, phone, job_title, hourly_rate_cents, employment_status, primary_location_id, user_id').eq('organization_id', workspace.organizationId).order('full_name'),
-      supabase.from('locations').select('id, name').eq('organization_id', workspace.organizationId).order('name'),
-      supabase.from('shifts').select('id, employee_id, starts_at, ends_at, position, status').eq('organization_id', workspace.organizationId).neq('status', 'cancelled').gte('starts_at', rangeStart.toISOString()).lt('starts_at', rangeEnd.toISOString()).order('starts_at'),
-      supabase.from('time_entries').select('employee_id, clocked_in_at, clocked_out_at').eq('organization_id', workspace.organizationId).gte('clocked_in_at', timeRangeStart.toISOString()),
-      personalTimeQuery,
-      supabase.from('staff_requests').select('id, employee_id, request_type, status, starts_on, ends_on, details, created_at').eq('organization_id', workspace.organizationId).order('created_at', { ascending: false }).limit(100),
-      personalBreakQuery,
-    ]);
+    const runLiveQueries = () => {
+      const personalTimeQuery = workspace.employeeId
+        ? client.from('time_entries').select('id, employee_id, clocked_in_at, clocked_out_at').eq('organization_id', workspace.organizationId).eq('employee_id', workspace.employeeId).order('clocked_in_at', { ascending: false }).limit(20)
+        : Promise.resolve({ data: [], error: null });
+      const personalBreakQuery = workspace.employeeId
+        ? client.from('break_entries').select('time_entry_id, started_at, ended_at, time_entries!inner(employee_id, organization_id)').eq('time_entries.organization_id', workspace.organizationId).eq('time_entries.employee_id', workspace.employeeId).order('started_at', { ascending: false }).limit(100)
+        : Promise.resolve({ data: [], error: null });
+      return Promise.all([
+        client.from('employees').select('id, full_name, email, phone, job_title, hourly_rate_cents, employment_status, primary_location_id, user_id').eq('organization_id', workspace.organizationId).order('full_name'),
+        client.from('locations').select('id, name').eq('organization_id', workspace.organizationId).order('name'),
+        client.from('shifts').select('id, employee_id, starts_at, ends_at, position, status').eq('organization_id', workspace.organizationId).neq('status', 'cancelled').gte('starts_at', rangeStart.toISOString()).lt('starts_at', rangeEnd.toISOString()).order('starts_at'),
+        client.from('time_entries').select('employee_id, clocked_in_at, clocked_out_at').eq('organization_id', workspace.organizationId).gte('clocked_in_at', timeRangeStart.toISOString()),
+        personalTimeQuery,
+        client.from('staff_requests').select('id, employee_id, request_type, status, starts_on, ends_on, details, created_at').eq('organization_id', workspace.organizationId).order('created_at', { ascending: false }).limit(100),
+        personalBreakQuery,
+      ] as const);
+    };
 
-    const error = employeeResult.error ?? locationResult.error ?? shiftResult.error ?? timeResult.error ?? personalTimeResult.error ?? requestResult.error ?? personalBreakResult.error;
+    let liveResults = await runLiveQueries();
+    let error = liveResults.map((result) => result.error).find(Boolean);
+    for (let attempt = 0; error && isTransientDataError(error.message) && attempt < 2; attempt += 1) {
+      await wait(400 * (2 ** attempt));
+      liveResults = await runLiveQueries();
+      error = liveResults.map((result) => result.error).find(Boolean);
+    }
+    const [employeeResult, locationResult, shiftResult, timeResult, personalTimeResult, requestResult, personalBreakResult] = liveResults;
     if (error) {
-      setDataError(error.message);
-      setDataLoading(false);
+      setDataError(liveDataErrorMessage(error.message));
+      if (!silent) setDataLoading(false);
       return;
     }
 
@@ -299,12 +335,66 @@ export function AppProvider({ children }: PropsWithChildren) {
     })));
     const openTimeEntry = personalTimeEntries.find((entry) => !entry.clocked_out_at);
     setOnBreak(Boolean(openTimeEntry && (personalBreakResult.data ?? []).some((breakEntry) => breakEntry.time_entry_id === openTimeEntry.id && !breakEntry.ended_at)));
-    setDataLoading(false);
+    setLastSyncedAt(Date.now());
+    if (!silent) setDataLoading(false);
   }, [backendConfigured, workspace]);
 
   useEffect(() => {
     void refreshLiveData();
   }, [refreshLiveData]);
+
+  useEffect(() => {
+    if (!backendConfigured || !supabase || !session || !workspace) {
+      setRealtimeStatus(backendConfigured ? 'connecting' : 'disabled');
+      return;
+    }
+
+    let active = true;
+    const client = supabase;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => { void refreshLiveData({ silent: true }); }, 300);
+    };
+    const organizationFilter = `organization_id=eq.${workspace.organizationId}`;
+    const channel = client.channel(`workspace-sync:${workspace.organizationId}:${session.user.id}`);
+
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'organizations', filter: `id=eq.${workspace.organizationId}` }, scheduleRefresh);
+    for (const table of ['memberships', 'locations', 'employees', 'shifts', 'time_entries', 'staff_requests']) {
+      channel.on('postgres_changes', { event: '*', schema: 'public', table, filter: organizationFilter }, scheduleRefresh);
+    }
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'break_entries' }, scheduleRefresh);
+
+    setRealtimeStatus('connecting');
+    const connect = async () => {
+      try {
+        await client.realtime.setAuth(session.access_token);
+        if (!active) return;
+        channel.subscribe((status) => {
+          if (!active) return;
+          if (status === 'SUBSCRIBED') setRealtimeStatus('live');
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setRealtimeStatus('degraded');
+        });
+      } catch {
+        if (active) setRealtimeStatus('degraded');
+      }
+    };
+    void connect();
+
+    return () => {
+      active = false;
+      if (refreshTimer) clearTimeout(refreshTimer);
+      void client.removeChannel(channel);
+    };
+  }, [backendConfigured, refreshLiveData, session?.access_token, session?.user.id, workspace?.organizationId]);
+
+  useEffect(() => {
+    if (!backendConfigured) return;
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') void refreshLiveData({ silent: true });
+    });
+    return () => subscription.remove();
+  }, [backendConfigured, refreshLiveData]);
 
   const activeEntry = useMemo(
     () => currentEmployeeId ? clockEntries.find((entry) => entry.employeeId === currentEmployeeId && !entry.clockOut) : undefined,
@@ -563,9 +653,9 @@ export function AppProvider({ children }: PropsWithChildren) {
   }, [backendConfigured, refreshLiveData, workspace]);
 
   const value = useMemo(() => ({
-    hydrated, dataLoading, dataError, liveClockEnabled: backendConfigured, clockActionLoading, clockActionError, breakActionLoading, breakActionError, employees, locations, role, currentEmployeeId, setRole: setDemoRole, clockEntries, activeEntry, onBreak, requests, shifts,
+    hydrated, dataLoading, dataError, lastSyncedAt, realtimeStatus, liveClockEnabled: backendConfigured, clockActionLoading, clockActionError, breakActionLoading, breakActionError, employees, locations, role, currentEmployeeId, setRole: setDemoRole, clockEntries, activeEntry, onBreak, requests, shifts,
     clockIn, clockOut, toggleBreak, resolveRequest, addTimeOffRequest, addShift, saveEmployee, inviteEmployee, publishSchedule, refreshLiveData,
-  }), [activeEntry, addShift, addTimeOffRequest, backendConfigured, breakActionError, breakActionLoading, clockActionError, clockActionLoading, clockEntries, clockIn, clockOut, currentEmployeeId, dataError, dataLoading, employees, hydrated, inviteEmployee, locations, onBreak, publishSchedule, refreshLiveData, requests, resolveRequest, role, saveEmployee, shifts, toggleBreak]);
+  }), [activeEntry, addShift, addTimeOffRequest, backendConfigured, breakActionError, breakActionLoading, clockActionError, clockActionLoading, clockEntries, clockIn, clockOut, currentEmployeeId, dataError, dataLoading, employees, hydrated, inviteEmployee, lastSyncedAt, locations, onBreak, publishSchedule, realtimeStatus, refreshLiveData, requests, resolveRequest, role, saveEmployee, shifts, toggleBreak]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

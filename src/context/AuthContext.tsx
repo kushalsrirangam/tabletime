@@ -41,6 +41,28 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function isTransientWorkspaceError(message: string) {
+  const normalized = message.toLowerCase();
+  return ['fetch', 'network', 'timeout', 'timed out', 'connection', 'socket', '502', '503', '504'].some((fragment) => normalized.includes(fragment));
+}
+
+function workspaceErrorMessage(message: string) {
+  if (isTransientWorkspaceError(message)) return 'The restaurant database is temporarily unavailable. It may be waking from inactivity; wait a moment and try again.';
+  if (message.toLowerCase().includes('jwt')) return 'Your session expired. Sign out and sign in again.';
+  return message;
+}
+
+async function withTransientRetry<T>(operation: () => PromiseLike<T>) {
+  let result = await operation();
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const error = (result as { error?: { message?: string } | null }).error;
+    if (!error?.message || !isTransientWorkspaceError(error.message)) break;
+    await new Promise<void>((resolve) => setTimeout(resolve, 400 * (2 ** attempt)));
+    result = await operation();
+  }
+  return result;
+}
+
 function readInvitationTokens(url: string) {
   const hashIndex = url.indexOf('#');
   const queryIndex = url.indexOf('?');
@@ -165,18 +187,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     setWorkspaceLoading(true);
     setWorkspaceError(undefined);
-    const { data: membership, error: membershipError } = await supabase
+    const client = supabase;
+    const { data: membership, error: membershipError } = await withTransientRetry(() => client
       .from('memberships')
       .select('id, organization_id, role, created_at')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: true })
       .limit(1)
-      .maybeSingle();
+      .maybeSingle());
 
     if (membershipError) {
       setHasMembership(false);
       setWorkspace(null);
-      setWorkspaceError(membershipError.message);
+      setWorkspaceError(workspaceErrorMessage(membershipError.message));
       setWorkspaceLoading(false);
       return;
     }
@@ -197,29 +220,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const [organizationResult, employeeResult, profileResult] = await Promise.all([
-      supabase.from('organizations').select('id, name, timezone').eq('id', membership.organization_id).maybeSingle(),
-      supabase.from('employees').select('id, full_name, job_title, primary_location_id').eq('organization_id', membership.organization_id).eq('user_id', session.user.id).maybeSingle(),
-      supabase.from('profiles').select('full_name').eq('id', session.user.id).maybeSingle(),
+      withTransientRetry(() => client.from('organizations').select('id, name, timezone').eq('id', membership.organization_id).maybeSingle()),
+      withTransientRetry(() => client.from('employees').select('id, full_name, job_title, primary_location_id').eq('organization_id', membership.organization_id).eq('user_id', session.user.id).maybeSingle()),
+      withTransientRetry(() => client.from('profiles').select('full_name').eq('id', session.user.id).maybeSingle()),
     ]);
 
     const relatedError = organizationResult.error ?? employeeResult.error ?? profileResult.error;
     if (relatedError || !organizationResult.data) {
       setHasMembership(false);
       setWorkspace(null);
-      setWorkspaceError(relatedError?.message ?? 'The restaurant workspace could not be found.');
+      setWorkspaceError(workspaceErrorMessage(relatedError?.message ?? 'The restaurant workspace could not be found.'));
       setWorkspaceLoading(false);
       return;
     }
 
     const employee = employeeResult.data;
     const locationResult = employee?.primary_location_id
-      ? await supabase.from('locations').select('id, name, address, timezone').eq('id', employee.primary_location_id).maybeSingle()
+      ? await withTransientRetry(() => client.from('locations').select('id, name, address, timezone').eq('id', employee.primary_location_id!).maybeSingle())
       : { data: null, error: null };
 
     if (locationResult.error) {
       setHasMembership(false);
       setWorkspace(null);
-      setWorkspaceError(locationResult.error.message);
+      setWorkspaceError(workspaceErrorMessage(locationResult.error.message));
       setWorkspaceLoading(false);
       return;
     }

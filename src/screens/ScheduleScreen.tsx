@@ -108,7 +108,7 @@ export function ScheduleScreen() {
         action={role === 'manager' && !mobile ? <View style={styles.titleActions}><Button label="Add shift" icon="add" variant="secondary" onPress={() => openForDay(selectedDay)} /><Button label={unpublishedCount === 0 ? 'Published' : `Publish ${unpublishedCount} drafts`} icon={unpublishedCount === 0 ? 'checkmark' : 'send-outline'} onPress={publishSchedule} /></View> : undefined}
       />
       <Card style={styles.calendarCard}>
-        {dataError ? <View style={styles.message}><Text style={styles.errorTitle}>Schedule data couldn’t load</Text><Text style={styles.messageCopy}>{dataError}</Text><Pressable onPress={refreshLiveData}><Text style={styles.retry}>Try again</Text></Pressable></View> : null}
+        {dataError ? <View style={styles.message}><Text style={styles.errorTitle}>Schedule data couldn’t load</Text><Text style={styles.messageCopy}>{dataError}</Text><Pressable onPress={() => { void refreshLiveData(); }}><Text style={styles.retry}>Try again</Text></Pressable></View> : null}
         {dataLoading ? <View style={styles.message}><ActivityIndicator color={colors.forest} /><Text style={styles.messageCopy}>Loading the schedule…</Text></View> : null}
         {!dataLoading && !dataError ? <>
         <View style={styles.scheduleToolbar}>

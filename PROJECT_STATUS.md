@@ -6,13 +6,13 @@ This is the permanent project checkpoint. Read it before development work and up
 
 ## Current overall progress
 
-Approximately **93% complete**.
+Approximately **95% complete**.
 
-- Design and interactive MVP: **99%**
+- Design and interactive MVP: **100%**
 - Database foundation: **100%**
 - Live backend connection: **100%**
-- Advanced restaurant features: **70%**
-- Store publication: **25%**
+- Advanced restaurant features: **82%**
+- Store publication: **55%**
 
 ## Completed and verified
 
@@ -161,6 +161,23 @@ Approximately **93% complete**.
 - Configured cloud workspaces clear all demo employees, locations, shifts, requests, punches, and breaks before the first live load, preventing demo data from appearing during a backend outage
 - Realtime and foreground refreshes use silent loading to avoid hiding visible schedules/rosters during background synchronization
 - The first post-Realtime typecheck caught a direct Pressable handler that no longer matched the new optional silent-refresh argument; the handler was wrapped correctly and the subsequent typecheck passed
+- Production-browser Realtime verification passed: the employee session reached `LIVE`, a temporary second-client published shift appeared without a reload, and the exact test shift was removed afterward
+- Supabase Postgres Changes does not deliver filtered DELETE events; the supported TableTime workflows use status/soft-delete updates, while rare administrative hard deletes require foreground or manual refresh
+- Expo SDK 57 release configuration now includes a unique `com.kushalsrirangam.tabletime` Android/iOS identifier, version 1.0.0 build versions, EAS preview/production profiles, remote build-number management, and draft/internal submission profiles
+- The default Expo placeholder artwork was replaced with generated TableTime restaurant-clock branding: a production app icon, Android adaptive foreground, web favicon, and native splash source
+- `expo-splash-screen` `~57.0.7` was installed from the exact SDK 57 documentation and its recommended config plugin is active with the TableTime brand colors
+- Store listing copy, release notes, privacy/data-safety disclosures, review instructions, Terms, and a native release checklist are now versioned under `docs/store`
+- Public `/privacy`, `/terms`, and `/delete-account` SPA routes render without authentication; sign-in and Account screens expose the relevant links
+- Vercel now has an SPA fallback for direct legal URLs plus CSP, HSTS, frame-denial, MIME-sniffing, referrer, and unused-permission headers
+- Apple/Google account-deletion requirements were reviewed against current first-party policy documentation and an easy-to-find signed-in Account screen was added
+- Self-service deletion requires password reauthentication, an explicit `DELETE` confirmation, a JWT-protected Edge Function, and a service-role-only database preparation function
+- Account deletion closes open attendance state, removes membership/profile access, de-identifies employee PII, and records an audit event while preserving legally relevant restaurant history; a sole owner with remaining staff must transfer ownership first
+- Hosted rollback verification passed for employee deletion preparation, membership/profile removal, workforce de-identification, audit creation, clean restoration, and the sole-owner safeguard; anonymous/authenticated database execution is denied and service-role execution is allowed
+- Deployed `delete-account` Edge Function version 1 is `ACTIVE` with JWT verification enabled, and an unauthenticated production POST returned HTTP 401
+- TypeScript, Expo public-config resolution, and the production web export pass after the release/legal/account-control work; the local Privacy and deletion routes rendered correctly in the browser
+- Expo Doctor now completes successfully with **21/21 checks passed** after the release dependencies and native configuration changes
+- An isolated Android prebuild completed successfully without modifying the repository; its generated manifest retained only Internet access, applied explicit removal rules for storage/overlay/vibration permissions, disabled app-data backup, and included the `tabletime` invite deep link
+- EAS preview and production builders are pinned to supported Node 22.13.0, avoiding the local Node 24.0.2 engine mismatch in release infrastructure
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -170,10 +187,11 @@ Approximately **93% complete**.
 - Owner sign-up, email confirmation, and bootstrap using a real user account
 - Production-browser request submission and manager review using the real test employee and manager accounts
 - Production-browser live break start/end and refresh persistence using the real employee test account
-- Production-browser Realtime subscription reaching `LIVE` and reacting to a second-client database change
 - Live workspace identity and role loading for an owner account
 - Employee creation, editing, location assignment, pay updates, and activation/deactivation using a real owner or manager account
 - Invitation email delivery, browser/mobile redirect, password setup, and final employee activation with a real newly invited account
+- A complete real-user deletion through the Edge Function is intentionally untested because it would permanently remove an existing test identity; use a disposable Auth identity for the final destructive E2E test
+- Branded splash rendering and adaptive-icon masking on physical Android/iOS release builds
 
 ## Failures and blockers
 
@@ -182,23 +200,26 @@ Approximately **93% complete**.
 - The pre-existing cloud project named `kushalsrirangam's Project` remains untouched.
 - The free Supabase project automatically became `INACTIVE` after low activity, causing database timeouts and a failed production login until it was manually restored. It is healthy again, but an always-on paid plan or an explicit development wake-up/health-check process is required for reliable unattended availability.
 - Private Realtime Broadcast is currently unusable on the restored free project because the platform-owned `realtime.messages` table has no date partitions. TableTime now uses RLS-protected Postgres Changes successfully as a restaurant-scale fallback; revisit Broadcast only after Supabase restores automatic message partition management.
+- Supabase Postgres Changes does not deliver organization-filtered hard-delete events. Supported user workflows use soft-delete/status updates, and foreground/manual refresh repairs rare administrative hard-delete state.
 - Supabase Security Advisor reports eight intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap, clock, break, employee-invitation acceptance, request-submission, and request-review RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
 - Supabase leaked-password protection is still disabled and should be enabled before launch. See the [password-security guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Performance Advisor reports only unused-index informational notices. This is expected before realistic traffic; index usage must be reassessed after production-like usage. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
 - Employee roster add/edit/deactivate is wired to the live database but still requires a real authenticated owner or manager test.
 - Hosted Supabase Auth still needs its Site URL set to `https://tabletime-3qn4.vercel.app` and its redirect allowlist updated with `https://tabletime-3qn4.vercel.app/**` and `tabletime://invite`. The exact settings are committed in `supabase/config.toml`, but `supabase config push` failed because the local CLI has no Supabase access token, and the available dashboard browser session was signed out. Invitation email delivery and redirect acceptance cannot be verified until this one hosted setting is applied after Supabase sign-in.
-- npm reports 10 moderate and 4 high issues in transitive Expo/Metro build tooling. A normal non-breaking `npm audit fix` was attempted but could not resolve the remaining advisories; the forced fix would perform an unsafe Expo downgrade, so it was not applied. The high findings are in Metro's build-time image parser, not the TableTime runtime or uploaded user content.
+- npm reports 11 moderate and 4 high issues in transitive Expo/Metro build tooling after adding the SDK-compatible splash package. A normal non-breaking `npm audit fix` was attempted but could not resolve the remaining advisories; the forced fix would perform an unsafe Expo downgrade, so it was not applied. The high findings are in Metro's build-time image parser, not the TableTime runtime or uploaded user content.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
-- The post-request-workflow `expo-doctor@latest` retry did not return diagnostic output in the managed terminal and left its npm process running; the last completed Expo Doctor result remains 18/18 and no dependencies changed in this milestone. Retry after resolving the local Node/npm tool process issue.
+- The first sandboxed `expo install expo-splash-screen` attempt failed with network `EACCES`; the approved network retry installed the exact SDK 57-compatible package successfully.
+- “TableTime” is already used by unrelated apps in both stores, so the release display/listing name is now `TableTime Staff`; final trademark/name clearance remains the owner's responsibility.
+- Store publication still needs a real public support email, legal developer/company name and address, Expo/Apple/Google developer accounts, store credentials, screenshots, native builds, and final submissions. These values cannot be invented or committed as secrets.
 
 ## Next work in order
 
-1. Commit, push, and verify the Realtime/recovery release reaches `LIVE` in the production employee session.
-2. Sign in to Supabase once, push or enter the committed Auth Site URL/redirect allowlist, then verify one complete invitation email and password-acceptance flow.
-3. Test production-browser request submission/review, live breaks, employee add/edit/location/pay/status, and real owner onboarding.
-4. Resolve the local Node/npm diagnostic process issue, upgrade Node to a supported release, and reassess the remaining build-time npm advisories.
-5. Decide between free-tier wake-up handling and an always-on Supabase plan before production launch.
-6. Prepare native Android and iOS release builds, store assets, privacy disclosures, and store submissions after the live workflows are verified.
+1. Commit, push, and verify the branded release, public legal URLs, security headers, Account screen, and deletion UI on Vercel production.
+2. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
+3. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
+4. Resolve the Node/npm diagnostic issue, use a supported Node release, rerun Expo Doctor/advisors/audit, and add production monitoring.
+5. Link an Expo account, create and test Android/iOS builds, capture store screenshots, and publish the legal pages with owner-supplied support/legal details.
+6. Create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
 
 ## Rule for future updates
 

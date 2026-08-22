@@ -1,32 +1,58 @@
 {
   "expo": {
-    "name": "TableTime",
+    "name": "TableTime Staff",
     "slug": "tabletime",
+    "description": "Restaurant staff scheduling, time clock, breaks, requests, and team management in one secure workspace.",
     "version": "1.0.0",
     "scheme": "tabletime",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/tabletime-icon.png",
+    "githubUrl": "https://github.com/kushalsrirangam/tabletime",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tabletime.staff"
+      "bundleIdentifier": "com.kushalsrirangam.tabletime",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "com.tabletime.staff",
+      "package": "com.kushalsrirangam.tabletime",
+      "versionCode": 1,
+      "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.VIBRATE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#14231D",
+        "foregroundImage": "./assets/tabletime-icon.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "favicon": "./assets/tabletime-icon.png",
+      "bundler": "metro",
+      "name": "TableTime Staff",
+      "shortName": "TableTime",
+      "lang": "en-US",
+      "themeColor": "#14231D",
+      "backgroundColor": "#F4F3EE",
+      "display": "standalone"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#14231D",
+          "image": "./assets/tabletime-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain"
+        }
+      ]
     ]
   }
 }

@@ -36,6 +36,7 @@ type AuthContextValue = {
   signOut: () => Promise<void>;
   completeInvitation: (password: string) => Promise<string | undefined>;
   cancelInvitation: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<{ error?: string; message?: string }>;
   refreshMembership: () => Promise<void>;
 };
 
@@ -61,6 +62,21 @@ async function withTransientRetry<T>(operation: () => PromiseLike<T>) {
     result = await operation();
   }
   return result;
+}
+
+async function edgeFunctionErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === 'object' && 'context' in error) {
+    const response = (error as { context?: Response }).context;
+    if (response?.clone) {
+      try {
+        const body = await response.clone().json() as { message?: string };
+        if (body.message) return body.message;
+      } catch {
+        // Fall through to the stable user-facing error below.
+      }
+    }
+  }
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
 function readInvitationTokens(url: string) {
@@ -288,6 +304,27 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await signOut();
   }, [signOut]);
 
+  const deleteAccount = useCallback(async (password: string) => {
+    if (!supabase || !session?.user.email) return { error: 'Sign in again before deleting your account.' };
+
+    const { error: reauthenticationError } = await supabase.auth.signInWithPassword({
+      email: session.user.email,
+      password,
+    });
+    if (reauthenticationError) return { error: 'The password was not correct. Your account was not deleted.' };
+
+    const { data, error } = await supabase.functions.invoke('delete-account', { body: { confirmed: true } });
+    if (error) return { error: await edgeFunctionErrorMessage(error, 'The account could not be deleted. Try again or contact support.') };
+
+    await supabase.auth.signOut({ scope: 'local' });
+    setHasMembership(false);
+    setWorkspace(null);
+    setWorkspaceError(undefined);
+    setInvitationPending(false);
+    clearInvitationUrl();
+    return { message: (data as { message?: string } | null)?.message ?? 'Your account was deleted.' };
+  }, [session]);
+
   const value = useMemo(() => ({
     backendConfigured: isBackendConfigured,
     loading,
@@ -304,8 +341,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     signOut,
     completeInvitation,
     cancelInvitation,
+    deleteAccount,
     refreshMembership,
-  }), [cancelInvitation, completeInvitation, hasMembership, invitationError, invitationLoading, invitationPending, loading, refreshMembership, session, signIn, signOut, signUp, workspace, workspaceError, workspaceLoading]);
+  }), [cancelInvitation, completeInvitation, deleteAccount, hasMembership, invitationError, invitationLoading, invitationPending, loading, refreshMembership, session, signIn, signOut, signUp, workspace, workspaceError, workspaceLoading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

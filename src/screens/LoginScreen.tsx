@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import React, { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
@@ -64,6 +65,13 @@ export function LoginScreen() {
             {submitting ? <ActivityIndicator color={colors.surface} /> : <><Text style={styles.submitText}>{mode === 'signIn' ? 'Sign in' : 'Create account'}</Text><Ionicons name="arrow-forward" size={18} color={colors.surface} /></>}
           </Pressable>
           <Text style={styles.help}>{mode === 'signIn' ? 'Need employee access? Ask your restaurant manager to invite you.' : 'Already have an account? Choose Sign in above.'}</Text>
+          <View style={styles.legalLinks}>
+            <Pressable accessibilityRole="link" onPress={() => void Linking.openURL('https://tabletime-3qn4.vercel.app/privacy')}><Text style={styles.legalLink}>Privacy</Text></Pressable>
+            <Text style={styles.legalDivider}>•</Text>
+            <Pressable accessibilityRole="link" onPress={() => void Linking.openURL('https://tabletime-3qn4.vercel.app/terms')}><Text style={styles.legalLink}>Terms</Text></Pressable>
+            <Text style={styles.legalDivider}>•</Text>
+            <Pressable accessibilityRole="link" onPress={() => void Linking.openURL('https://tabletime-3qn4.vercel.app/delete-account')}><Text style={styles.legalLink}>Delete account</Text></Pressable>
+          </View>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -79,4 +87,6 @@ const styles = StyleSheet.create({
   field: { gap: 8, marginBottom: 17 }, label: { color: colors.ink, fontSize: 12, fontWeight: '800' }, input: { height: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 12, backgroundColor: colors.canvas, paddingHorizontal: 14, color: colors.ink, fontSize: 14 },
   error: { flexDirection: 'row', gap: 7, backgroundColor: colors.redSoft, borderRadius: 10, padding: 11, marginBottom: 14 }, errorText: { flex: 1, color: colors.red, fontSize: 12, lineHeight: 17 }, notice: { flexDirection: 'row', gap: 7, backgroundColor: colors.mint, borderRadius: 10, padding: 11, marginBottom: 14 }, noticeText: { flex: 1, color: colors.forest, fontSize: 12, lineHeight: 17 },
   submit: { height: 50, borderRadius: 12, backgroundColor: colors.forest, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, submitDisabled: { opacity: 0.45 }, submitText: { color: colors.surface, fontSize: 14, fontWeight: '800' }, pressed: { opacity: 0.78 }, help: { color: colors.muted, fontSize: 11, textAlign: 'center', marginTop: 18 },
+  legalLinks: { marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 7 },
+  legalLink: { color: colors.forest, fontSize: 11, fontWeight: '700' }, legalDivider: { color: colors.border, fontSize: 11 },
 });

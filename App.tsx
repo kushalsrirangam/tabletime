@@ -12,6 +12,8 @@ import { TeamScreen } from './src/screens/TeamScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { InvitationSetupScreen } from './src/screens/InvitationSetupScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { AccountScreen } from './src/screens/AccountScreen';
+import { PublicDocumentKind, PublicDocumentScreen } from './src/screens/PublicDocumentScreen';
 import { colors } from './src/theme';
 import { TabKey } from './src/types';
 
@@ -23,12 +25,15 @@ function AppContent() {
     clock: <ClockScreen />,
     team: <TeamScreen />,
     requests: <RequestsScreen />,
+    account: <AccountScreen />,
   }[activeTab];
 
   return <AppShell activeTab={activeTab} onTabChange={setActiveTab}>{screen}</AppShell>;
 }
 
 export default function App() {
+  const publicDocument = getPublicDocument();
+  if (publicDocument) return <PublicDocumentScreen kind={publicDocument} />;
   return (
     <AuthProvider>
       <AppProvider>
@@ -39,6 +44,15 @@ export default function App() {
       </AppProvider>
     </AuthProvider>
   );
+}
+
+function getPublicDocument(): PublicDocumentKind | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  if (path === '/privacy') return 'privacy';
+  if (path === '/terms') return 'terms';
+  if (path === '/delete-account') return 'delete-account';
+  return undefined;
 }
 
 function AuthGate() {

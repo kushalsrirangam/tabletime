@@ -1,5 +1,5 @@
 export type UserRole = 'manager' | 'employee';
-export type TabKey = 'home' | 'schedule' | 'clock' | 'team' | 'requests';
+export type TabKey = 'home' | 'schedule' | 'clock' | 'team' | 'requests' | 'account';
 export type EmploymentStatus = 'invited' | 'active' | 'inactive';
 
 export type WorkLocation = {

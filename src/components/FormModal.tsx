@@ -11,12 +11,13 @@ type FormModalProps = {
   submitLabel: string;
   canSubmit?: boolean;
   submitting?: boolean;
+  submitVariant?: 'primary' | 'danger';
   onClose: () => void;
   onSubmit: () => void;
   children: React.ReactNode;
 };
 
-export function FormModal({ visible, title, subtitle, submitLabel, canSubmit = true, submitting = false, onClose, onSubmit, children }: FormModalProps) {
+export function FormModal({ visible, title, subtitle, submitLabel, canSubmit = true, submitting = false, submitVariant = 'primary', onClose, onSubmit, children }: FormModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -29,7 +30,7 @@ export function FormModal({ visible, title, subtitle, submitLabel, canSubmit = t
           <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">{children}</ScrollView>
           <View style={styles.footer}>
             <Button label="Cancel" variant="secondary" disabled={submitting} onPress={onClose} />
-            <Button label={submitLabel} icon="checkmark" loading={submitting} disabled={!canSubmit || submitting} onPress={onSubmit} />
+            <Button label={submitLabel} icon={submitVariant === 'danger' ? 'trash-outline' : 'checkmark'} variant={submitVariant} loading={submitting} disabled={!canSubmit || submitting} onPress={onSubmit} />
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -37,7 +38,7 @@ export function FormModal({ visible, title, subtitle, submitLabel, canSubmit = t
   );
 }
 
-export function FormField({ label, value, placeholder, onChangeText, multiline = false, keyboardType = 'default', autoCapitalize }: { label: string; value: string; placeholder: string; onChangeText: (value: string) => void; multiline?: boolean; keyboardType?: TextInputProps['keyboardType']; autoCapitalize?: TextInputProps['autoCapitalize'] }) {
+export function FormField({ label, value, placeholder, onChangeText, multiline = false, keyboardType = 'default', autoCapitalize, secureTextEntry = false, autoComplete }: { label: string; value: string; placeholder: string; onChangeText: (value: string) => void; multiline?: boolean; keyboardType?: TextInputProps['keyboardType']; autoCapitalize?: TextInputProps['autoCapitalize']; secureTextEntry?: boolean; autoComplete?: TextInputProps['autoComplete'] }) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -50,6 +51,8 @@ export function FormField({ label, value, placeholder, onChangeText, multiline =
         multiline={multiline}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
+        secureTextEntry={secureTextEntry}
+        autoComplete={autoComplete}
         style={[styles.input, multiline && styles.textarea]}
       />
     </View>

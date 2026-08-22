@@ -14,6 +14,7 @@ const navItems: NavItem[] = [
   { key: 'clock', label: 'Time clock', icon: 'time-outline' },
   { key: 'team', label: 'Team', icon: 'people-outline', managerOnly: true },
   { key: 'requests', label: 'Requests', icon: 'file-tray-full-outline' },
+  { key: 'account', label: 'Account', icon: 'person-circle-outline' },
 ];
 
 type Props = { activeTab: TabKey; onTabChange: (tab: TabKey) => void; children: React.ReactNode };

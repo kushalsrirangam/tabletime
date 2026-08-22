@@ -529,6 +529,13 @@ export type Database = {
           organization_id: string
         }[]
       }
+      prepare_account_deletion: {
+        Args: { p_user_id: string }
+        Returns: {
+          deletion_mode: string
+          organization_name: string
+        }[]
+      }
       review_staff_request: {
         Args: { p_decision: string; p_request_id: string }
         Returns: string

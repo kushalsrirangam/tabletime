@@ -17,8 +17,9 @@
 - [x] Vercel deployed and served the release-quality commit successfully
 - [x] Expo account linked and EAS project ID verified through `eas project:info`
 - [x] Preview and production EAS environments contain the client-safe backend configuration
-- [ ] Android preview APK built and tested on a physical device
-- [ ] Android production AAB built successfully
+- [x] Android preview APK built successfully
+- [ ] Android preview APK tested on a physical device or emulator
+- [x] Android production AAB built successfully
 - [ ] iOS production IPA built successfully
 
 ## Product verification

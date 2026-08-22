@@ -13,6 +13,8 @@
 - [x] Supported Node 22.13.0 pinned for local, CI, and EAS build environments
 - [x] Release-quality gate passes TypeScript, Expo Doctor, web export, and high/critical dependency audit
 - [x] High-severity Metro dependency findings resolved with the SDK-compatible 0.84.5 patch
+- [x] GitHub Actions release-quality workflow passed on the supported Node version
+- [x] Vercel deployed and served the release-quality commit successfully
 - [ ] Expo account linked and EAS project ID written by `eas init`
 - [ ] Android preview APK built and tested on a physical device
 - [ ] Android production AAB built successfully

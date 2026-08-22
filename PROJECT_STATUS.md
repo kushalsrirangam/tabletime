@@ -1,17 +1,17 @@
 # TableTime project status
 
-Last updated: August 15, 2026
+Last updated: August 22, 2026
 
 This is the permanent project checkpoint. Read it before development work and update it after every task.
 
 ## Current overall progress
 
-Approximately **83% complete**.
+Approximately **84% complete**.
 
 - Design and interactive MVP: **97%**
 - Database foundation: **99%**
-- Live backend connection: **95%**
-- Advanced restaurant features: **26%**
+- Live backend connection: **97%**
+- Advanced restaurant features: **27%**
 - Store publication: **25%**
 
 ## Completed and verified
@@ -109,8 +109,15 @@ Approximately **83% complete**.
 - Live browser login passed for both roles on the Vercel production app
 - Manager browser verification confirmed real workspace identity, both roster members, hourly workforce data access, and employee edit controls
 - Employee browser verification confirmed real workspace identity, no Team management navigation, and exactly one personal published shift totaling 5 hours
-- The production browser is left signed in as the manager test account for review
 - Post-test verification passed: TypeScript produced no errors, and the production HTML and JavaScript bundle both returned HTTP 200
+- The inactive free-tier Supabase project was restored on August 22, 2026 and verified back in `ACTIVE_HEALTHY` status with both Auth users and all test workspace data intact
+- Real employee login succeeded again after database restoration, with the employee workspace and location loaded from Supabase
+- Live clock-in verification passed through the production app: Taylor Employee created a server-authoritative `mobile` punch at Main Test Location and the dashboard changed immediately to `Clocked in`
+- The open punch appeared in the Time clock screen as `1:30 PM – Now`, and the database confirmed exactly one open row with the authenticated employee and location
+- Live clock-out verification passed through the production app: the same row received a server timestamp 25 seconds after clock-in and the database confirmed zero remaining open entries
+- Employee RLS verification confirmed the authenticated employee could read the completed personal punch while it remained isolated through the existing time-entry policy
+- A full production-page reload preserved the signed-in session, off-shift state, and completed `1:30 PM – 1:31 PM` personal punch history with no browser console errors or warnings
+- The production browser is left signed in as Taylor Employee on the verified Time clock screen
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -118,8 +125,7 @@ Approximately **83% complete**.
 
 - End-to-end owner onboarding and owner-specific RLS behavior
 - Owner sign-up, email confirmation, and bootstrap using a real user account
-- Successful clock-in and clock-out calls, authoritative refresh, and personal punch-history reads from an authenticated employee
-- Live punch and request reads from the app
+- Live request reads from the app
 - Live workspace identity and role loading for an owner account
 - Employee creation, editing, location assignment, pay updates, and activation/deactivation using a real owner or manager account
 
@@ -128,10 +134,11 @@ Approximately **83% complete**.
 - The connected Vercel API tool still lists no projects even though the browser dashboard shows the verified `tabletime-3qn4` project and production deployment. Dashboard deployment and the public URL work correctly, but connector-based monitoring remains unavailable until the two Vercel sessions are reconciled.
 - Docker Desktop's Linux engine returned an internal API error. Local Supabase still cannot start, although both migrations are now applied and verified in the dedicated cloud project.
 - The pre-existing cloud project named `kushalsrirangam's Project` remains untouched.
+- The free Supabase project automatically became `INACTIVE` after low activity, causing database timeouts and a failed production login until it was manually restored. It is healthy again, but an always-on paid plan or an explicit development wake-up/health-check process is required for reliable unattended availability.
 - Supabase Security Advisor reports three intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap and clock RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
 - Supabase leaked-password protection is still disabled and should be enabled before launch. See the [password-security guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Performance Advisor reports only unused-index informational notices. This is expected before realistic traffic; index usage must be reassessed after production-like usage. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
-- Clock-in, clock-out, and personal punch history are now wired to the live database but still require a real authenticated employee test. Breaks and requests remain demo/local because the database does not yet expose a break write RPC and request actions are not yet connected.
+- Breaks and requests remain demo/local because the database does not yet expose a break write RPC and request actions are not yet connected.
 - Signed-in manager and employee navigation still shows the demo pending-request count of `2` because requests are not yet loaded from Supabase.
 - Employee roster add/edit/deactivate is wired to the live database but still requires a real authenticated owner or manager test.
 - Creating an employee roster record does not yet create an Auth account or send an invitation email. Secure invitations require a protected server-side Auth workflow; no service-role key is exposed in the app.
@@ -140,12 +147,12 @@ Approximately **83% complete**.
 
 ## Next work in order
 
-1. Run live employee clock-in, clock-out, and personal history tests with the new test account.
-2. Add secure employee invitation emails and Auth-account linking through protected server-side code.
-3. Connect requests and manager approvals to the live database, replacing the remaining demo request count.
-4. Add secure break start/end RPCs and synchronize live break state.
-5. Test employee add/edit/location/pay/status workflows through the manager UI, then test real owner onboarding.
-6. Add Realtime updates plus resilient offline/retry handling.
+1. Add secure employee invitation emails and Auth-account linking through protected server-side code.
+2. Connect requests and manager approvals to the live database, replacing the remaining demo request count.
+3. Add secure break start/end RPCs and synchronize live break state.
+4. Test employee add/edit/location/pay/status workflows through the manager UI, then test real owner onboarding.
+5. Add Realtime updates plus resilient offline/retry handling and a clear health/recovery path for an inactive development database.
+6. Decide between free-tier wake-up handling and an always-on Supabase plan before production launch.
 7. Prepare native Android and iOS release builds, store assets, privacy disclosures, and store submissions after the live workflows are verified.
 
 ## Rule for future updates

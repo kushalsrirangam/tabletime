@@ -11,8 +11,8 @@ Approximately **98% complete**.
 - Design and interactive MVP: **100%**
 - Database foundation: **100%**
 - Live backend connection: **100%**
-- Advanced restaurant features: **91%**
-- Store publication: **87%**
+- Advanced restaurant features: **92%**
+- Store publication: **90%**
 
 ## Completed and verified
 
@@ -219,8 +219,10 @@ Approximately **98% complete**.
 - Android production build `727e0ac9-4375-4664-9541-b87448dbe1a6` finished successfully as a Play Store AAB for SDK 57, app version 1.0.0/versionCode 2, package `com.kushalsrirangam.tabletime`, and the EAS-managed production keystore
 - The signed production bundle is available from the [stable Expo build page](https://expo.dev/accounts/kushalkings-team/projects/clockin/builds/727e0ac9-4375-4664-9541-b87448dbe1a6); its download followed the expected redirects and returned HTTP 200 with a 50,734,218-byte AAB
 - Clean iOS production preflight initialized remote buildNumber 1 and reached remote-credential resolution, then stopped before upload/build because no Apple Distribution Certificate/provisioning credentials are configured; no Apple password was requested from the owner or written to the project
-- An eight-page project report was generated at `output/pdf/TableTime_Project_Summary_and_Remaining_Work.pdf`, summarizing completed work, remaining work, features, role capabilities, architecture, websites/services, exact library versions, security verification, blockers, release roadmap, estimates, and key links without including credentials
-- PDF QA passed: Poppler rendered all eight A4 pages, the full visual contact sheet and dense individual pages showed no clipping/overlap/readability defects, text extraction found 15,318 characters with no empty pages, all required section headings were present, and six link annotations were retained
+- The eight-page report at `output/pdf/TableTime_Project_Summary_and_Remaining_Work.pdf` was refreshed on August 23 with current 98/100/100/100/92/90 progress, the safe replacement Android builds, scheduled production health checks, rolling demo schedule, exact store-asset status, current blockers, and revised release roadmap; it contains no credentials
+- The refreshed PDF's first render exposed an incorrect page-template carryover that darkened the inside pages; the template switch and alternating table backgrounds were corrected before delivery
+- Refreshed PDF QA passed: Poppler rendered all eight A4 pages, individual visual inspection found no clipping, overlap, broken tables, or readability defects, text extraction found 15,353 characters with no empty pages, all required section headings were present, and eight link annotations were retained
+- Repository attributes now mark PDF and PNG/JPEG assets as binary so Windows Git cannot apply text line-ending transformations that could corrupt store images or PDF cross-reference offsets
 - The native release checklist was initially reconciled with cloud-build evidence; the later emulator launch test superseded that checkpoint by proving both pre-fix Android artifacts unsafe for release
 - Official Android command-line tools were checksum-verified and installed into the existing SDK; an isolated Pixel 6 / Android 15 Google Play AVD was created, booted, and authorized with the existing local ADB key
 - Installing the original signed preview APK on that emulator exposed a reproducible native-only crash (`Cannot read property 'pathname' of undefined`) that web checks could not detect; the same pre-fix code is present in the original production AAB, so both original artifacts are explicitly obsolete
@@ -235,6 +237,13 @@ Approximately **98% complete**.
 - A least-privilege `Production health` GitHub Actions workflow now checks the production app, Privacy, Terms, account-deletion page, and Supabase Auth gateway every six hours and on manual dispatch; it has a five-minute timeout, concurrency cancellation, read-only permissions, and no application credential
 - Local preflight for the scheduled health workflow passed with HTTP 200 for all four Vercel routes and the expected unauthenticated HTTP 401 from the reachable Supabase Auth gateway
 - GitHub `Production health` run `32663413379` passed on its first pushed execution, and companion `Release quality` run `32663413377` also passed on the same commit; future failures remain visible in the repository Actions history and can use the owner's GitHub notification preferences
+- Demo schedule fixtures now follow the current `America/Chicago` calendar week instead of expiring on hard-coded August dates; a clean local browser origin showed all eight shifts, 61.0 scheduled hours, and three drafts
+- The complete local demo attendance sequence was reverified: clock in, start break, end break, and clock out all reached the expected final state and produced a completed punch entry
+- Five Google Play phone screenshot drafts were prepared at 1080 x 1920 and five Apple iPhone 6.1-inch drafts at 1080 x 2340; exact dimensions and 24-bit RGB formats were verified and representative files passed visual inspection
+- A Google Play app icon was prepared at 512 x 512 with alpha, and a generated TableTime Staff feature graphic was prepared at 1024 x 500 without alpha; exact dimensions/pixel formats and the final visual appearance were verified
+- Store-asset source files, honest draft limitations, screenshot sequence/alt text, official specification links, and the exact feature-graphic generation prompt are recorded in `output/store-assets/README.md`
+- The release gate passed again after the rolling demo-schedule fix: strict TypeScript, Expo Doctor 18/18, production web export, and zero high/critical dependency findings
+- Expo Doctor initially failed in the sandbox because npm registry/cache access returned `EACCES`; the approved retry completed all 18 checks successfully
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -252,6 +261,7 @@ Approximately **98% complete**.
 - Branded splash rendering and adaptive-icon masking on physical Android/iOS release builds; the adaptive Android launcher icon is verified on the emulator, while physical-device masking remains pending
 - Replacement Android preview APK smoke testing on a physical Android device; Android 15 emulator smoke testing is complete
 - Replacement Android production AAB versionCode 3 upload and closed/internal-track validation in Google Play; the earlier versionCode 2 artifact is obsolete and must not be uploaded
+- Store screenshot drafts are correctly sized for listing planning but were captured from the local responsive web demo; final signed-native captures must replace them because the drafts contain demo-only role controls and labels
 
 ## Failures and blockers
 
@@ -269,6 +279,7 @@ Approximately **98% complete**.
 - The Supabase connector independently verifies the TableTime project is `ACTIVE_HEALTHY` on Postgres 17.6.1. The exact hosted Auth URL Configuration page is open for the owner to complete private GitHub sign-in; no password, 2FA value, or persistent access token was requested or exposed.
 - npm reports 11 moderate and **zero high/critical** issues in transitive Expo/Xcode build tooling. The patched Metro 0.84.5 update removed all four high findings. A forced fix would perform an unsafe Expo downgrade, so it was not applied.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
+- The plain PowerShell `npm` shim resolves through a stale roaming installation and failed to load its npm CLI module. The explicit supported `C:\Program Files\nodejs\npm.cmd` launcher and direct bundled Node commands work and passed the release gate; repair the stale shim before relying on unqualified `npm` commands.
 - The first sandboxed `expo install expo-splash-screen` attempt failed with network `EACCES`; the approved network retry installed the exact SDK 57-compatible package successfully.
 - A checksum-verified official Android SDK command-line tools package was installed into the existing SDK, and an isolated Pixel 6 / Android 15 Google Play emulator was created. The AVD manager emitted a non-fatal missing `devices.xml` warning, but the AVD registered, booted, and authorized successfully through the existing local ADB key.
 - The signed preview APK installed successfully on the Android 15 emulator, and the branded adaptive launcher icon rendered correctly. Launch then exposed a reproducible native-only JavaScript crash: `TypeError: Cannot read property 'pathname' of undefined` in `App`.
@@ -281,9 +292,9 @@ Approximately **98% complete**.
 
 ## Next work in order
 
-1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
+1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist, decide whether to upgrade to Pro for leaked-password protection, then verify one complete invitation email/password flow.
 2. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
-3. Test the release on a physical Android device and upload versionCode 3 to a Google Play test track; complete private Apple credential setup, create/test the iOS build, and capture the remaining store screenshots.
+3. Test the release on a physical Android device and upload versionCode 3 to a Google Play test track; complete private Apple credential setup, create/test the iOS build, and replace all demo listing drafts with signed-native store screenshots.
 4. Add an external client-error destination and verify release alerting after a provider/account is selected; recurring public endpoint health checks are already active and verified.
 5. Publish final legal pages with owner-supplied support/legal details, create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
 

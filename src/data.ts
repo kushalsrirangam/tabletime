@@ -1,5 +1,41 @@
 import { Employee, Shift, StaffRequest } from './types';
 
+const demoTimeZone = 'America/Chicago';
+
+function demoCalendarDay(offset: number) {
+  const baseParts = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: demoTimeZone,
+  }).formatToParts(new Date());
+  const value = (type: Intl.DateTimeFormatPartTypes) => Number(baseParts.find((part) => part.type === type)?.value);
+  const anchor = new Date(Date.UTC(value('year'), value('month') - 1, value('day') + offset, 12));
+  const dateIso = anchor.toISOString().slice(0, 10);
+  return {
+    day: offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' : new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: demoTimeZone }).format(anchor),
+    date: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: demoTimeZone }).format(anchor),
+    dateIso,
+  };
+}
+
+function clockMinutes(value: string) {
+  const match = value.match(/^(\d{1,2}):(\d{2})\s(AM|PM)$/);
+  if (!match) throw new Error(`Invalid demo shift time: ${value}`);
+  const hour = (Number(match[1]) % 12) + (match[3] === 'PM' ? 12 : 0);
+  return hour * 60 + Number(match[2]);
+}
+
+function demoShift(id: string, employeeId: string, dayOffset: number, start: string, end: string, role: string, published: boolean): Shift {
+  const calendarDay = demoCalendarDay(dayOffset);
+  const startsAt = new Date(`${calendarDay.dateIso}T00:00:00.000Z`);
+  const endsAt = new Date(startsAt);
+  startsAt.setUTCMinutes(clockMinutes(start));
+  endsAt.setUTCMinutes(clockMinutes(end));
+  if (endsAt <= startsAt) endsAt.setUTCDate(endsAt.getUTCDate() + 1);
+  return { id, employeeId, day: calendarDay.day, date: calendarDay.date, start, end, role, published, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() };
+}
+
 export const employees: Employee[] = [
   { id: 'e1', name: 'Jordan Lee', initials: 'JL', role: 'General Manager', color: '#286B50', status: 'clocked-in', employmentStatus: 'active', primaryLocationId: 'demo-main', primaryLocationName: 'The Juniper Room', weeklyHours: 31.5 },
   { id: 'e2', name: 'Maya Brooks', initials: 'MB', role: 'Server', color: '#D8793D', status: 'clocked-in', employmentStatus: 'active', primaryLocationId: 'demo-main', primaryLocationName: 'The Juniper Room', weeklyHours: 27 },
@@ -10,14 +46,14 @@ export const employees: Employee[] = [
 ];
 
 export const shifts: Shift[] = [
-  { id: 's1', employeeId: 'e1', day: 'Today', date: 'Aug 7', start: '9:00 AM', end: '5:00 PM', role: 'Manager', published: true },
-  { id: 's2', employeeId: 'e2', day: 'Today', date: 'Aug 7', start: '11:00 AM', end: '7:00 PM', role: 'Server', published: true },
-  { id: 's3', employeeId: 'e3', day: 'Today', date: 'Aug 7', start: '10:00 AM', end: '6:00 PM', role: 'Line Cook', published: true },
-  { id: 's4', employeeId: 'e4', day: 'Tomorrow', date: 'Aug 8', start: '4:00 PM', end: '11:00 PM', role: 'Bartender', published: true },
-  { id: 's5', employeeId: 'e5', day: 'Tomorrow', date: 'Aug 8', start: '3:00 PM', end: '9:00 PM', role: 'Host', published: true },
-  { id: 's6', employeeId: 'e6', day: 'Sunday', date: 'Aug 9', start: '8:00 AM', end: '4:00 PM', role: 'Prep Cook', published: false },
-  { id: 's7', employeeId: 'e2', day: 'Monday', date: 'Aug 10', start: '11:00 AM', end: '7:00 PM', role: 'Server', published: false },
-  { id: 's8', employeeId: 'e3', day: 'Monday', date: 'Aug 10', start: '2:00 PM', end: '10:00 PM', role: 'Line Cook', published: false },
+  demoShift('s1', 'e1', 0, '9:00 AM', '5:00 PM', 'Manager', true),
+  demoShift('s2', 'e2', 0, '11:00 AM', '7:00 PM', 'Server', true),
+  demoShift('s3', 'e3', 0, '10:00 AM', '6:00 PM', 'Line Cook', true),
+  demoShift('s4', 'e4', 1, '4:00 PM', '11:00 PM', 'Bartender', true),
+  demoShift('s5', 'e5', 1, '3:00 PM', '9:00 PM', 'Host', true),
+  demoShift('s6', 'e6', 2, '8:00 AM', '4:00 PM', 'Prep Cook', false),
+  demoShift('s7', 'e2', 3, '11:00 AM', '7:00 PM', 'Server', false),
+  demoShift('s8', 'e3', 3, '2:00 PM', '10:00 PM', 'Line Cook', false),
 ];
 
 export const initialRequests: StaffRequest[] = [

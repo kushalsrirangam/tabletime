@@ -51,9 +51,12 @@
 - [x] Privacy and data-safety answers drafted from current behavior
 - [x] Review instructions drafted
 - [x] Public privacy-policy URL deployed and verified at `https://tabletime-3qn4.vercel.app/privacy`
+- [x] Google Play 512 x 512 app icon prepared and pixel format verified
+- [x] Google Play 1024 x 500 feature graphic prepared and visually inspected
+- [x] Five Google Play and five Apple phone screenshot drafts prepared at accepted dimensions
 - [ ] Public support email and legal developer details supplied
 - [x] Account-deletion web URL deployed and verified at `https://tabletime-3qn4.vercel.app/delete-account`
-- [ ] Phone and tablet screenshots captured from release build
+- [ ] Final phone and tablet screenshots captured from signed native release builds without demo-only UI
 - [ ] Google Play developer account and application created
 - [ ] Apple Developer account and App Store Connect application created
 - [ ] Content ratings, categories, pricing, countries, and declarations completed

@@ -221,7 +221,14 @@ Approximately **98% complete**.
 - Clean iOS production preflight initialized remote buildNumber 1 and reached remote-credential resolution, then stopped before upload/build because no Apple Distribution Certificate/provisioning credentials are configured; no Apple password was requested from the owner or written to the project
 - An eight-page project report was generated at `output/pdf/TableTime_Project_Summary_and_Remaining_Work.pdf`, summarizing completed work, remaining work, features, role capabilities, architecture, websites/services, exact library versions, security verification, blockers, release roadmap, estimates, and key links without including credentials
 - PDF QA passed: Poppler rendered all eight A4 pages, the full visual contact sheet and dense individual pages showed no clipping/overlap/readability defects, text extraction found 15,318 characters with no empty pages, all required section headings were present, and six link annotations were retained
-- The native release checklist was reconciled with verified EAS evidence: Android preview build and Android production AAB are now checked complete, while Android device/emulator testing remains a separate unresolved item
+- The native release checklist was initially reconciled with cloud-build evidence; the later emulator launch test superseded that checkpoint by proving both pre-fix Android artifacts unsafe for release
+- Official Android command-line tools were checksum-verified and installed into the existing SDK; an isolated Pixel 6 / Android 15 Google Play AVD was created, booted, and authorized with the existing local ADB key
+- Installing the original signed preview APK on that emulator exposed a reproducible native-only crash (`Cannot read property 'pathname' of undefined`) that web checks could not detect; the same pre-fix code is present in the original production AAB, so both original artifacts are explicitly obsolete
+- Public-document routing and authentication URL cleanup now require `Platform.OS === 'web'` before reading browser location/history, following the Expo SDK 57 platform guidance; the fix is committed and pushed as `132298c`
+- The post-fix release gate passed strict TypeScript, Expo Doctor 18/18, production web export, and the zero-high/critical dependency threshold; React review found no new hook, render, accessibility, or performance issue
+- Replacement Android preview build `414154eb-16bf-4230-8b51-ec936e4cd1ee` finished successfully from commit `132298c` for app version 1.0.0/build 2 and is available from its [stable Expo build page](https://expo.dev/accounts/kushalkings-team/projects/clockin/builds/414154eb-16bf-4230-8b51-ec936e4cd1ee)
+- The replacement APK installed successfully on the Android 15 emulator, cold-launched its real `MainActivity` in 857 ms, remained the foreground process, rendered the complete branded Supabase-backed sign-in interface, and produced zero filtered `AndroidRuntime` or `ReactNativeJS` errors
+- The 1080×2400 native login screen was visually inspected without clipping or broken layout and retained at `output/screenshots/android/tabletime-android-login.png`; the release checklist now marks Android emulator testing complete
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -236,8 +243,8 @@ Approximately **98% complete**.
 - Invitation email delivery, browser/mobile redirect, password setup, and final employee activation with a real newly invited account
 - Password-reset email delivery, browser/native redirect, password update, and restored sign-in with a real account
 - A complete real-user deletion through the Edge Function is intentionally untested because it would permanently remove an existing test identity; use a disposable Auth identity for the final destructive E2E test
-- Branded splash rendering and adaptive-icon masking on physical Android/iOS release builds
-- Replacement Android preview APK installation and full smoke testing on the configured Android 15 emulator and then a physical Android device
+- Branded splash rendering and adaptive-icon masking on physical Android/iOS release builds; the adaptive Android launcher icon is verified on the emulator, while physical-device masking remains pending
+- Replacement Android preview APK smoke testing on a physical Android device; Android 15 emulator smoke testing is complete
 - Replacement Android production AAB upload and closed/internal-track validation in Google Play; the earlier versionCode 2 artifact is obsolete because it predates the native route-guard fix
 
 ## Failures and blockers
@@ -260,7 +267,7 @@ Approximately **98% complete**.
 - The signed preview APK installed successfully on the Android 15 emulator, and the branded adaptive launcher icon rendered correctly. Launch then exposed a reproducible native-only JavaScript crash: `TypeError: Cannot read property 'pathname' of undefined` in `App`.
 - The native crash was traced to web route helpers that checked only for `window`; React Native defines a `window` object without `window.location`. Both public-document routing and authentication URL cleanup now guard on `Platform.OS === 'web'`, following the Expo SDK 57 platform guidance.
 - The post-fix release gate passed: strict TypeScript, Expo Doctor 18/18, production web export, and zero high/critical dependency findings. React quality review found no new hooks, render, accessibility, or performance issue in the platform guards.
-- Android preview build `4a21820a-cc01-4be2-ac6e-44111187852e` and production build `727e0ac9-4375-4664-9541-b87448dbe1a6` are obsolete because they contain the pre-fix native crash. They must not be uploaded to a store; replacement signed artifacts and emulator verification are in progress.
+- Android preview build `4a21820a-cc01-4be2-ac6e-44111187852e` and production build `727e0ac9-4375-4664-9541-b87448dbe1a6` are obsolete because they contain the pre-fix native crash and must not be uploaded to a store. The preview has been replaced and verified; a replacement production AAB is still required.
 - “TableTime” is already used by unrelated apps in both stores, so the release display/listing name is now `TableTime Staff`; final trademark/name clearance remains the owner's responsibility.
 - iOS production building is blocked at Apple credential setup: EAS has no Distribution Certificate/provisioning credentials, and non-interactive setup cannot create them. The owner must use a paid Apple Developer account in one interactive EAS credentials/build session; the Apple password and 2FA code must be entered privately and must never be sent in chat or committed.
 - Store publication still needs a real public support email, legal developer/company name and address, Apple/Google developer accounts, store credentials, screenshots, an iOS production build, physical-device testing, and final submissions. These values cannot be invented or committed as secrets.
@@ -269,7 +276,7 @@ Approximately **98% complete**.
 
 1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
 2. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
-3. Build and smoke-test the corrected Android preview on the Android 15 emulator, replace the obsolete production AAB, then test on a physical device and upload to a Google Play test track; complete private Apple credential setup, create/test the iOS build, and capture store screenshots.
+3. Replace the obsolete Android production AAB, then test the release on a physical device and upload to a Google Play test track; complete private Apple credential setup, create/test the iOS build, and capture the remaining store screenshots.
 4. Add an external production error-monitoring destination and verify its release alerting.
 5. Publish final legal pages with owner-supplied support/legal details, create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
 

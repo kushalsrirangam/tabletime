@@ -11,7 +11,7 @@ Approximately **98% complete**.
 - Design and interactive MVP: **100%**
 - Database foundation: **100%**
 - Live backend connection: **100%**
-- Advanced restaurant features: **90%**
+- Advanced restaurant features: **91%**
 - Store publication: **87%**
 
 ## Completed and verified
@@ -232,6 +232,8 @@ Approximately **98% complete**.
 - Replacement Android production build `60d824a4-afea-4c29-b56d-3184d7e67386` finished successfully from verified commit `210137b` as app version 1.0.0/versionCode 3 for `com.kushalsrirangam.tabletime`, superseding the unsafe versionCode 2 artifact; it is available from its [stable Expo build page](https://expo.dev/accounts/kushalkings-team/projects/clockin/builds/60d824a4-afea-4c29-b56d-3184d7e67386)
 - The replacement AAB downloaded successfully at 50,733,627 bytes with SHA-256 `279AB6A155280CC1A513A531F8F0BA4758AC7A2AB68C3434C1D3F0C05837FA02`; its ZIP structure contains all required bundle/manifest/DEX entries and all 1,194 entries were readable
 - JDK signature verification returned `jar verified`; the EAS-managed Android certificate is a normal self-signed 2048-bit RSA app-signing certificate valid through January 7, 2054, and no private signing material was exposed locally
+- A least-privilege `Production health` GitHub Actions workflow now checks the production app, Privacy, Terms, account-deletion page, and Supabase Auth gateway every six hours and on manual dispatch; it has a five-minute timeout, concurrency cancellation, read-only permissions, and no application credential
+- Local preflight for the scheduled health workflow passed with HTTP 200 for all four Vercel routes and the expected unauthenticated HTTP 401 from the reachable Supabase Auth gateway
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -259,10 +261,11 @@ Approximately **98% complete**.
 - Private Realtime Broadcast is currently unusable on the restored free project because the platform-owned `realtime.messages` table has no date partitions. TableTime now uses RLS-protected Postgres Changes successfully as a restaurant-scale fallback; revisit Broadcast only after Supabase restores automatic message partition management.
 - Supabase Postgres Changes does not deliver organization-filtered hard-delete events. Supported user workflows use soft-delete/status updates, and foreground/manual refresh repairs rare administrative hard-delete state.
 - Supabase Security Advisor reports eight intentional warnings because authenticated users can call the narrow `SECURITY DEFINER` owner-bootstrap, clock, break, employee-invitation acceptance, request-submission, and request-review RPCs. Anonymous access is blocked, each function verifies `auth.uid()`, and the privileged operations are deliberately narrow. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
-- Supabase leaked-password protection is still disabled and should be enabled before launch. See the [password-security guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+- Supabase leaked-password protection is still disabled. Current official documentation confirms it is available only on the Pro plan or above, so enabling it requires an explicit paid-plan decision; no subscription expense was started. See the [password-security guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Performance Advisor reports only unused-index informational notices. This is expected before realistic traffic; index usage must be reassessed after production-like usage. See the [advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
 - Employee roster add/edit/deactivate is wired to the live database but still requires a real authenticated owner or manager test.
 - Hosted Supabase Auth still needs its Site URL set to `https://tabletime-3qn4.vercel.app` and its redirect allowlist updated with `https://tabletime-3qn4.vercel.app/**`, `tabletime://invite`, and `tabletime://reset-password`. The exact settings are committed in `supabase/config.toml`, but `supabase config push` failed because the local CLI has no Supabase access token, and the available dashboard browser session was signed out. Invitation and password-recovery email redirects cannot be verified until this hosted setting is applied after Supabase sign-in.
+- The Supabase connector independently verifies the TableTime project is `ACTIVE_HEALTHY` on Postgres 17.6.1. The exact hosted Auth URL Configuration page is open for the owner to complete private GitHub sign-in; no password, 2FA value, or persistent access token was requested or exposed.
 - npm reports 11 moderate and **zero high/critical** issues in transitive Expo/Xcode build tooling. The patched Metro 0.84.5 update removed all four high findings. A forced fix would perform an unsafe Expo downgrade, so it was not applied.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
 - The first sandboxed `expo install expo-splash-screen` attempt failed with network `EACCES`; the approved network retry installed the exact SDK 57-compatible package successfully.
@@ -280,7 +283,7 @@ Approximately **98% complete**.
 1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
 2. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
 3. Test the release on a physical Android device and upload versionCode 3 to a Google Play test track; complete private Apple credential setup, create/test the iOS build, and capture the remaining store screenshots.
-4. Add an external production error-monitoring destination and verify its release alerting.
+4. Verify the scheduled production-health workflow in GitHub Actions, then add an external client-error destination and verify release alerting after a provider/account is selected.
 5. Publish final legal pages with owner-supplied support/legal details, create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
 
 ## Rule for future updates

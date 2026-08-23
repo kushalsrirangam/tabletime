@@ -41,6 +41,7 @@
 - [ ] Supabase Auth production Site URL and redirect allowlist applied
 - [ ] Leaked-password protection enabled
 - [ ] Always-on database plan or explicit uptime process selected
+- [x] Scheduled public production endpoint health workflow configured and locally preflighted
 - [ ] Production error monitoring and release alerting configured
 - [ ] Final dependency and native manifest review completed on supported Node.js
 

@@ -1,0 +1,46 @@
+name: Production health
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/production-health.yml
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-health
+  cancel-in-progress: true
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check production web and public release pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in \
+            "https://tabletime-3qn4.vercel.app/" \
+            "https://tabletime-3qn4.vercel.app/privacy" \
+            "https://tabletime-3qn4.vercel.app/terms" \
+            "https://tabletime-3qn4.vercel.app/delete-account"
+          do
+            curl --fail --silent --show-error --location --max-time 20 "$url" > /dev/null
+          done
+
+      - name: Check Supabase authentication gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          status_code="$(curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code}' \
+            "https://eaguhqtgvtoowmmhypll.supabase.co/auth/v1/health")"
+          if [[ "$status_code" != "401" ]]; then
+            echo "Expected the public gateway's no-key response (401), received ${status_code}."
+            exit 1
+          fi

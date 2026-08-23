@@ -12,7 +12,7 @@ Approximately **98% complete**.
 - Database foundation: **100%**
 - Live backend connection: **100%**
 - Advanced restaurant features: **90%**
-- Store publication: **84%**
+- Store publication: **87%**
 
 ## Completed and verified
 
@@ -229,6 +229,9 @@ Approximately **98% complete**.
 - Replacement Android preview build `414154eb-16bf-4230-8b51-ec936e4cd1ee` finished successfully from commit `132298c` for app version 1.0.0/build 2 and is available from its [stable Expo build page](https://expo.dev/accounts/kushalkings-team/projects/clockin/builds/414154eb-16bf-4230-8b51-ec936e4cd1ee)
 - The replacement APK installed successfully on the Android 15 emulator, cold-launched its real `MainActivity` in 857 ms, remained the foreground process, rendered the complete branded Supabase-backed sign-in interface, and produced zero filtered `AndroidRuntime` or `ReactNativeJS` errors
 - The 1080×2400 native login screen was visually inspected without clipping or broken layout and retained at `output/screenshots/android/tabletime-android-login.png`; the release checklist now marks Android emulator testing complete
+- Replacement Android production build `60d824a4-afea-4c29-b56d-3184d7e67386` finished successfully from verified commit `210137b` as app version 1.0.0/versionCode 3 for `com.kushalsrirangam.tabletime`, superseding the unsafe versionCode 2 artifact; it is available from its [stable Expo build page](https://expo.dev/accounts/kushalkings-team/projects/clockin/builds/60d824a4-afea-4c29-b56d-3184d7e67386)
+- The replacement AAB downloaded successfully at 50,733,627 bytes with SHA-256 `279AB6A155280CC1A513A531F8F0BA4758AC7A2AB68C3434C1D3F0C05837FA02`; its ZIP structure contains all required bundle/manifest/DEX entries and all 1,194 entries were readable
+- JDK signature verification returned `jar verified`; the EAS-managed Android certificate is a normal self-signed 2048-bit RSA app-signing certificate valid through January 7, 2054, and no private signing material was exposed locally
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -245,7 +248,7 @@ Approximately **98% complete**.
 - A complete real-user deletion through the Edge Function is intentionally untested because it would permanently remove an existing test identity; use a disposable Auth identity for the final destructive E2E test
 - Branded splash rendering and adaptive-icon masking on physical Android/iOS release builds; the adaptive Android launcher icon is verified on the emulator, while physical-device masking remains pending
 - Replacement Android preview APK smoke testing on a physical Android device; Android 15 emulator smoke testing is complete
-- Replacement Android production AAB upload and closed/internal-track validation in Google Play; the earlier versionCode 2 artifact is obsolete because it predates the native route-guard fix
+- Replacement Android production AAB versionCode 3 upload and closed/internal-track validation in Google Play; the earlier versionCode 2 artifact is obsolete and must not be uploaded
 
 ## Failures and blockers
 
@@ -267,7 +270,7 @@ Approximately **98% complete**.
 - The signed preview APK installed successfully on the Android 15 emulator, and the branded adaptive launcher icon rendered correctly. Launch then exposed a reproducible native-only JavaScript crash: `TypeError: Cannot read property 'pathname' of undefined` in `App`.
 - The native crash was traced to web route helpers that checked only for `window`; React Native defines a `window` object without `window.location`. Both public-document routing and authentication URL cleanup now guard on `Platform.OS === 'web'`, following the Expo SDK 57 platform guidance.
 - The post-fix release gate passed: strict TypeScript, Expo Doctor 18/18, production web export, and zero high/critical dependency findings. React quality review found no new hooks, render, accessibility, or performance issue in the platform guards.
-- Android preview build `4a21820a-cc01-4be2-ac6e-44111187852e` and production build `727e0ac9-4375-4664-9541-b87448dbe1a6` are obsolete because they contain the pre-fix native crash and must not be uploaded to a store. The preview has been replaced and verified; a replacement production AAB is still required.
+- Android preview build `4a21820a-cc01-4be2-ac6e-44111187852e` and production build `727e0ac9-4375-4664-9541-b87448dbe1a6` are obsolete because they contain the pre-fix native crash and must not be uploaded to a store. Both have now been replaced; the new preview passed emulator verification and the new production AAB passed structure and signature checks.
 - “TableTime” is already used by unrelated apps in both stores, so the release display/listing name is now `TableTime Staff`; final trademark/name clearance remains the owner's responsibility.
 - iOS production building is blocked at Apple credential setup: EAS has no Distribution Certificate/provisioning credentials, and non-interactive setup cannot create them. The owner must use a paid Apple Developer account in one interactive EAS credentials/build session; the Apple password and 2FA code must be entered privately and must never be sent in chat or committed.
 - Store publication still needs a real public support email, legal developer/company name and address, Apple/Google developer accounts, store credentials, screenshots, an iOS production build, physical-device testing, and final submissions. These values cannot be invented or committed as secrets.
@@ -276,7 +279,7 @@ Approximately **98% complete**.
 
 1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
 2. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
-3. Replace the obsolete Android production AAB, then test the release on a physical device and upload to a Google Play test track; complete private Apple credential setup, create/test the iOS build, and capture the remaining store screenshots.
+3. Test the release on a physical Android device and upload versionCode 3 to a Google Play test track; complete private Apple credential setup, create/test the iOS build, and capture the remaining store screenshots.
 4. Add an external production error-monitoring destination and verify its release alerting.
 5. Publish final legal pages with owner-supplied support/legal details, create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
 

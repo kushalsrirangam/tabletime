@@ -19,7 +19,7 @@
 - [x] Preview and production EAS environments contain the client-safe backend configuration
 - [x] Android preview APK built successfully
 - [x] Android preview APK tested on an Android 15 emulator
-- [ ] Replacement Android production AAB built successfully from the native route-guard fix
+- [x] Replacement Android production AAB built and signature/structure verified from the native route-guard fix
 - [ ] iOS production IPA built successfully
 
 ## Product verification

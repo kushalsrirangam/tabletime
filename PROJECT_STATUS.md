@@ -244,6 +244,7 @@ Approximately **98% complete**.
 - Store-asset source files, honest draft limitations, screenshot sequence/alt text, official specification links, and the exact feature-graphic generation prompt are recorded in `output/store-assets/README.md`
 - The release gate passed again after the rolling demo-schedule fix: strict TypeScript, Expo Doctor 18/18, production web export, and zero high/critical dependency findings
 - Expo Doctor initially failed in the sandbox because npm registry/cache access returned `EACCES`; the approved retry completed all 18 checks successfully
+- Git commit `9a0ea38` (`Refresh demo schedule and prepare store assets`) was pushed to GitHub `main`; `Release quality` run `32665240965` completed successfully, both linked Vercel deployment checks reported success, and the production site returned HTTP 200 with title `TableTime Staff` and bundle `index-605dde5b9bc5d86f69a37b1d465a3443.js`
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 

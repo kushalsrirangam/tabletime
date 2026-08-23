@@ -11,7 +11,7 @@ Approximately **98% complete**.
 - Design and interactive MVP: **100%**
 - Database foundation: **100%**
 - Live backend connection: **100%**
-- Advanced restaurant features: **92%**
+- Advanced restaurant features: **94%**
 - Store publication: **90%**
 
 ## Completed and verified
@@ -117,7 +117,13 @@ Approximately **98% complete**.
 - Live clock-out verification passed through the production app: the same row received a server timestamp 25 seconds after clock-in and the database confirmed zero remaining open entries
 - Employee RLS verification confirmed the authenticated employee could read the completed personal punch while it remained isolated through the existing time-entry policy
 - A full production-page reload preserved the signed-in session, off-shift state, and completed `1:30 PM – 1:31 PM` personal punch history with no browser console errors or warnings
-- The production browser is left signed in as Taylor Employee on the verified Time clock screen
+- A full production live-break sequence was completed as Taylor Employee: clock in, start break, full page reload while `ON BREAK`, end break, and clock out all reached the expected UI states without exposing manager navigation
+- Cloud verification confirmed the resulting 71-second time entry and 36-second break use server timestamps, have exactly one `started` and one `ended` break audit event, and leave zero open time entries and zero open breaks
+- Supabase API logs independently recorded HTTP 200 responses for `start_break`, `end_break`, and `clock_out` during the production sequence
+- Taylor Employee submitted a real August 30-31 time-off request through the production UI; it appeared immediately and survived a full reload in the employee request workspace
+- Cloud verification confirmed exactly one matching pending `time_off` row with the expected dates/note and one `submitted` audit event; the request is intentionally preserved for the remaining manager approve/decline browser test
+- Supabase API logs independently recorded HTTP 200 for `submit_time_off_request` and the following RLS-protected request reloads
+- The production browser is left signed in as Taylor Employee on the verified Requests screen
 - Secure employee invitations are now initiated from the live employee editor only after an employee record and work email have been saved
 - The `invite-employee` Supabase Edge Function is deployed as active version 2 with JWT verification enabled, strict manager/owner membership checks, employee/email validation, a production/local origin allowlist, and no service-role credential in the client
 - A direct public request to the deployed invitation endpoint returned HTTP 401, confirming the platform JWT guard blocks unauthenticated callers before invitation logic runs
@@ -252,8 +258,7 @@ Approximately **98% complete**.
 
 - End-to-end owner onboarding and owner-specific RLS behavior
 - Owner sign-up, email confirmation, and bootstrap using a real user account
-- Production-browser request submission and manager review using the real test employee and manager accounts
-- Production-browser live break start/end and refresh persistence using the real employee test account
+- Production-browser manager approval or decline of the preserved real employee request using the manager test account
 - Live workspace identity and role loading for an owner account
 - Employee creation, editing, location assignment, pay updates, and activation/deactivation using a real owner or manager account
 - Invitation email delivery, browser/mobile redirect, password setup, and final employee activation with a real newly invited account
@@ -294,7 +299,7 @@ Approximately **98% complete**.
 ## Next work in order
 
 1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist, decide whether to upgrade to Pro for leaked-password protection, then verify one complete invitation email/password flow.
-2. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
+2. Sign in as the manager to approve or decline the preserved employee request, then test employee management, owner onboarding, and account deletion with a disposable identity in production; employee submission and live break persistence are verified.
 3. Test the release on a physical Android device and upload versionCode 3 to a Google Play test track; complete private Apple credential setup, create/test the iOS build, and replace all demo listing drafts with signed-native store screenshots.
 4. Add an external client-error destination and verify release alerting after a provider/account is selected; recurring public endpoint health checks are already active and verified.
 5. Publish final legal pages with owner-supplied support/legal details, create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.

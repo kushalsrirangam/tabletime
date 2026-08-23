@@ -1,6 +1,6 @@
 # TableTime project status
 
-Last updated: August 22, 2026
+Last updated: August 23, 2026
 
 This is the permanent project checkpoint. Read it before development work and update it after every task.
 
@@ -237,8 +237,8 @@ Approximately **98% complete**.
 - Password-reset email delivery, browser/native redirect, password update, and restored sign-in with a real account
 - A complete real-user deletion through the Edge Function is intentionally untested because it would permanently remove an existing test identity; use a disposable Auth identity for the final destructive E2E test
 - Branded splash rendering and adaptive-icon masking on physical Android/iOS release builds
-- Android preview APK installation and full smoke testing on a physical Android device; the current free-tier artifact expires September 5, 2026 and can be regenerated from the committed profile
-- Android production AAB upload and closed/internal-track validation in Google Play; the current EAS artifact expires September 21, 2026 and can be regenerated from the committed production profile
+- Replacement Android preview APK installation and full smoke testing on the configured Android 15 emulator and then a physical Android device
+- Replacement Android production AAB upload and closed/internal-track validation in Google Play; the earlier versionCode 2 artifact is obsolete because it predates the native route-guard fix
 
 ## Failures and blockers
 
@@ -256,6 +256,11 @@ Approximately **98% complete**.
 - npm reports 11 moderate and **zero high/critical** issues in transitive Expo/Xcode build tooling. The patched Metro 0.84.5 update removed all four high findings. A forced fix would perform an unsafe Expo downgrade, so it was not applied.
 - Local Node.js is 24.0.2; React Native tooling requests 24.3+ or a supported Node 22 release. Builds currently pass, but Node should be upgraded before native release builds.
 - The first sandboxed `expo install expo-splash-screen` attempt failed with network `EACCES`; the approved network retry installed the exact SDK 57-compatible package successfully.
+- A checksum-verified official Android SDK command-line tools package was installed into the existing SDK, and an isolated Pixel 6 / Android 15 Google Play emulator was created. The AVD manager emitted a non-fatal missing `devices.xml` warning, but the AVD registered, booted, and authorized successfully through the existing local ADB key.
+- The signed preview APK installed successfully on the Android 15 emulator, and the branded adaptive launcher icon rendered correctly. Launch then exposed a reproducible native-only JavaScript crash: `TypeError: Cannot read property 'pathname' of undefined` in `App`.
+- The native crash was traced to web route helpers that checked only for `window`; React Native defines a `window` object without `window.location`. Both public-document routing and authentication URL cleanup now guard on `Platform.OS === 'web'`, following the Expo SDK 57 platform guidance.
+- The post-fix release gate passed: strict TypeScript, Expo Doctor 18/18, production web export, and zero high/critical dependency findings. React quality review found no new hooks, render, accessibility, or performance issue in the platform guards.
+- Android preview build `4a21820a-cc01-4be2-ac6e-44111187852e` and production build `727e0ac9-4375-4664-9541-b87448dbe1a6` are obsolete because they contain the pre-fix native crash. They must not be uploaded to a store; replacement signed artifacts and emulator verification are in progress.
 - “TableTime” is already used by unrelated apps in both stores, so the release display/listing name is now `TableTime Staff`; final trademark/name clearance remains the owner's responsibility.
 - iOS production building is blocked at Apple credential setup: EAS has no Distribution Certificate/provisioning credentials, and non-interactive setup cannot create them. The owner must use a paid Apple Developer account in one interactive EAS credentials/build session; the Apple password and 2FA code must be entered privately and must never be sent in chat or committed.
 - Store publication still needs a real public support email, legal developer/company name and address, Apple/Google developer accounts, store credentials, screenshots, an iOS production build, physical-device testing, and final submissions. These values cannot be invented or committed as secrets.
@@ -264,7 +269,7 @@ Approximately **98% complete**.
 
 1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
 2. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
-3. Install and smoke-test the Android preview build on a physical device, upload the finished AAB to a Google Play test track, complete private Apple credential setup, create/test the iOS build, and capture store screenshots.
+3. Build and smoke-test the corrected Android preview on the Android 15 emulator, replace the obsolete production AAB, then test on a physical device and upload to a Google Play test track; complete private Apple credential setup, create/test the iOS build, and capture store screenshots.
 4. Add an external production error-monitoring destination and verify its release alerting.
 5. Publish final legal pages with owner-supplied support/legal details, create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
 

@@ -51,7 +51,7 @@ export default function App() {
 }
 
 function getPublicDocument(): PublicDocumentKind | undefined {
-  if (typeof window === 'undefined') return undefined;
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   if (path === '/privacy') return 'privacy';
   if (path === '/terms') return 'terms';

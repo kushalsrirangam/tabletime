@@ -103,7 +103,7 @@ function readAuthTokens(url: string) {
 }
 
 function clearAuthUrl() {
-  if (typeof window === 'undefined') return;
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
   const path = ['/invite', '/reset-password'].includes(window.location.pathname) ? '/' : window.location.pathname;
   window.history.replaceState(null, '', path);
 }

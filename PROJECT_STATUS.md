@@ -234,6 +234,7 @@ Approximately **98% complete**.
 - JDK signature verification returned `jar verified`; the EAS-managed Android certificate is a normal self-signed 2048-bit RSA app-signing certificate valid through January 7, 2054, and no private signing material was exposed locally
 - A least-privilege `Production health` GitHub Actions workflow now checks the production app, Privacy, Terms, account-deletion page, and Supabase Auth gateway every six hours and on manual dispatch; it has a five-minute timeout, concurrency cancellation, read-only permissions, and no application credential
 - Local preflight for the scheduled health workflow passed with HTTP 200 for all four Vercel routes and the expected unauthenticated HTTP 401 from the reachable Supabase Auth gateway
+- GitHub `Production health` run `32663413379` passed on its first pushed execution, and companion `Release quality` run `32663413377` also passed on the same commit; future failures remain visible in the repository Actions history and can use the owner's GitHub notification preferences
 - Permanent continuity rule added to `AGENTS.md`
 - This status file is required to be updated after every development task
 
@@ -283,7 +284,7 @@ Approximately **98% complete**.
 1. Sign in to Supabase once, apply the committed Auth Site URL/redirect allowlist and leaked-password protection, then verify one complete invitation email/password flow.
 2. Test request review, live breaks, employee management, owner onboarding, and account deletion with a disposable identity in production.
 3. Test the release on a physical Android device and upload versionCode 3 to a Google Play test track; complete private Apple credential setup, create/test the iOS build, and capture the remaining store screenshots.
-4. Verify the scheduled production-health workflow in GitHub Actions, then add an external client-error destination and verify release alerting after a provider/account is selected.
+4. Add an external client-error destination and verify release alerting after a provider/account is selected; recurring public endpoint health checks are already active and verified.
 5. Publish final legal pages with owner-supplied support/legal details, create the Apple/Google store records, connect credentials, submit internal/TestFlight builds, complete review forms, and submit production releases.
 
 ## Rule for future updates
